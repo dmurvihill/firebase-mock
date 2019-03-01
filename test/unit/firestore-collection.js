@@ -468,6 +468,34 @@ describe('MockFirestoreCollection', function () {
     });
   });
 
+  describe('#listDocuments', function () {
+    it('retrieves all data for existing collection', function(done) {
+      db.autoFlush();
+      var keys = Object.keys(require('./data.json').collections);
+      collection.listDocuments().then(function(refs) {
+        expect(refs.length).to.equal(6);
+        refs.forEach(function(ref) {
+          expect(keys).to.contain(ref.id);
+        });
+        done();
+      }).catch(done);
+    });
+
+    it('retrieves data added to collection', function(done) {
+      db.autoFlush();
+      db.collection('group').add({
+        name: 'test'
+      });
+      db.collection('group').listDocuments().then(function(refs) {
+        expect(refs.length).to.equal(1);
+        refs[0].get().then(function(doc) {
+          expect(doc.data().name).to.equal('test');
+          done();
+        }).catch(done);
+      }).catch(done);
+    });
+  });
+
   describe('#onSnapshot', function () {
     it('returns value after collection is updated', function (done) {
       var callCount = 0;
@@ -477,11 +505,11 @@ describe('MockFirestoreCollection', function () {
         snap.docs.forEach(function(doc) {
           names.push(doc.data().name);
         });
-        
+
         if (callCount === 2) {
           expect(names).to.contain('A');
           expect(names).not.to.contain('a');
-          done();  
+          done();
         }
       });
       collection.doc('a').update({name: 'A'}, {setMerge: true});
@@ -523,7 +551,7 @@ describe('MockFirestoreCollection', function () {
 
       collection.doc('a').update({name: 'A'}, {setMerge: true});
       collection.flush();
-      
+
       process.nextTick(function() {
         expect(callCount).to.equal(2);
 
@@ -537,8 +565,6 @@ describe('MockFirestoreCollection', function () {
           done();
         });
       });
-      
-
     });
 
     it('Calls onError if error', function (done) {
@@ -560,6 +586,5 @@ describe('MockFirestoreCollection', function () {
       collection.doc('a').update({name: 'A'}, {setMerge: true});
       collection.flush();
     });
-
   });
 });
