@@ -229,6 +229,11 @@ describe('MockFirestoreCollection', function () {
       ]);
     });
 
+    it('returns matched documents for operator ">="');
+    it('returns matched documents for operator "<="');
+    it('returns matched documents for operator ">"');
+    it('returns matched documents for operator "<"');
+
     it('returns matched documents for operator "array-contains"', function() {
       var results1 = collection.where('array', 'array-contains', 'x').get();
       var results2 = collection.where('array', 'array-contains', 'z').get();
