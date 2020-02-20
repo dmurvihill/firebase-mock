@@ -102,14 +102,13 @@ MockFirestoreQuery.prototype.stream = function () {
 };
 
 MockFirestoreQuery.prototype.where = function (property, operator, value) {
-  var query = this.clone();
-  var path = getPropertyPath(property);
+  const path = getPropertyPath(property);
 
   if (_.size(this.data) === 0) {
     return new MockFirestoreQuery(this.path, null, this.parent, this.id);
   }
 
-  var results = {};
+  const results = {};
 
   switch (operator) {
     case '==':
@@ -136,6 +135,7 @@ MockFirestoreQuery.prototype.where = function (property, operator, value) {
         }
       });
       break;
+
     case '>=':
       _.forEach(this.data, function(data, key) {
         if (_.get(data, property) >= value) {
