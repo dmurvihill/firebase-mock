@@ -114,7 +114,8 @@ MockFirestoreQuery.prototype.where = function (property, operator, value) {
   switch (operator) {
     case '==':
       _.forEach(this.data, function(data, key) {
-        if (_.isEqual(_.get(data, property), value)) {
+        const queryable = { data: data, key: key };
+        if (_.isEqual(_.get(queryable, path), value)) {
           results[key] = _.cloneDeep(data);
         }
       });

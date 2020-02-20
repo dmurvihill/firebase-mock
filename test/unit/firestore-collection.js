@@ -244,19 +244,6 @@ describe('MockFirestoreCollection', function () {
       ]);
     });
 
-    it('returns all documents when using unsupported operator', function() {
-      var expected = 6;
-
-      var results1 = collection.where('name', '>', 3).get();
-      var results2 = collection.where('name', '>', 0).get();
-      db.flush();
-
-      return Promise.all([
-        expect(results1).to.eventually.have.property('size').to.equal(expected),
-        expect(results2).to.eventually.have.property('size').to.equal(expected)
-      ]);
-    });
-
     it('returns matched documents with multiple where calls', function() {
       var results1 = collection.where('name_type', '==', 'string').where('name', '==', 'a').get();
       var results2 = collection.where('name_type', '==', 'number').where('name', '==', 'a').get();
@@ -272,7 +259,7 @@ describe('MockFirestoreCollection', function () {
       ]);
     });
 
-    it('allow using complex path', function() {
+    it('allows using complex path', function() {
       var results1 = collection.where('complex.name', '==', 'a').get();
       var results2 = collection.where('complex.name', '==', 1).get();
       var results3 = collection.where(new Firestore.FieldPath('complex', 'name'), '==', 1).get();
