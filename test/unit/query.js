@@ -146,6 +146,16 @@ describe('MockQuery', function () {
         expect(spy.called).to.equal(true);
       });
 
+      it('should work with boolean equalTo', function() {
+        var spy = sinon.spy(function(snap) {
+          expect(_.keys(snap.val())).eql(['bool_true']);
+        });
+
+        ref.equalTo(true).on('value', spy);
+        ref.flush();
+        expect(spy).callCount(1);
+      });
+
       it('should return null if not equalTo', function() {
         var spy = sinon.spy(function(snap) {
           expect(snap.val()).equals(null);

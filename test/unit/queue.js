@@ -80,11 +80,15 @@ describe('FlushQueue', function () {
 
     it('can invoke events after a delay', function () {
       var clock = sinon.useFakeTimers();
-      queue.push(spy);
-      queue.flush(100);
-      expect(spy.called).to.equal(false);
-      clock.tick(100);
-      expect(spy.called).to.equal(true);
+      try {
+        queue.push(spy);
+        queue.flush(100);
+        expect(spy.called).to.equal(false);
+        clock.tick(100);
+        expect(spy.called).to.equal(true);
+      } finally {
+        clock.restore();
+      }
     });
 
   });

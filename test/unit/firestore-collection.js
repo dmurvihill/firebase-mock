@@ -10,6 +10,7 @@ chai.use(require('sinon-chai'));
 var expect = chai.expect;
 var _ = require('../../src/lodash');
 var Firestore = require('../../').MockFirestore;
+var Timestamp = require('../../src/timestamp');
 
 describe('MockFirestoreCollection', function () {
 
@@ -215,6 +216,8 @@ describe('MockFirestoreCollection', function () {
       var results5 = collection.where('name_type', '==', 'number').get();
       var results6 = collection.where('name_type', '==', 'abc').get();
       var results7 = collection.where('value', '==', 3).get();
+      var results8 = collection.where(Firestore.FieldPath.documentId(), '==', '3').get();
+      var results9 = collection.where(new Firestore.FieldPath('name'), '==', 3).get();
       db.flush();
 
       return Promise.all([
@@ -224,7 +227,20 @@ describe('MockFirestoreCollection', function () {
         expect(results4).to.eventually.have.property('size').to.equal(3),
         expect(results5).to.eventually.have.property('size').to.equal(3),
         expect(results6).to.eventually.have.property('size').to.equal(0),
-        expect(results7).to.eventually.have.property('size').to.equal(0)
+        expect(results7).to.eventually.have.property('size').to.equal(0),
+        expect(results8).to.eventually.have.property('size').to.equal(1),
+        expect(results9).to.eventually.have.property('size').to.equal(1),
+      ]);
+    });
+
+    it('returns matched documents for operator "array-contains"', function() {
+      var results1 = collection.where('array', 'array-contains', 'x').get();
+      var results2 = collection.where('array', 'array-contains', 'z').get();
+      db.flush();
+
+      return Promise.all([
+        expect(results1).to.eventually.have.property('size').to.equal(2),
+        expect(results2).to.eventually.have.property('size').to.equal(0),
       ]);
     });
 
@@ -259,11 +275,13 @@ describe('MockFirestoreCollection', function () {
     it('allow using complex path', function() {
       var results1 = collection.where('complex.name', '==', 'a').get();
       var results2 = collection.where('complex.name', '==', 1).get();
+      var results3 = collection.where(new Firestore.FieldPath('complex', 'name'), '==', 1).get();
       db.flush();
 
       return Promise.all([
         expect(results1).to.eventually.have.property('size').to.equal(1),
-        expect(results2).to.eventually.have.property('size').to.equal(1)
+        expect(results2).to.eventually.have.property('size').to.equal(1),
+        expect(results3).to.eventually.have.property('size').to.equal(1)
       ]);
     });
   });
@@ -332,6 +350,160 @@ describe('MockFirestoreCollection', function () {
         done();
       }).catch(done);
     });
+
+    it('returns documents ordered by name using FieldPath', function(done) {
+      var results1 = collection.orderBy(new Firestore.FieldPath('name')).get();
+      var results2 = collection.orderBy(new Firestore.FieldPath('name'), 'desc').get();
+      db.flush();
+
+      Promise.all([results1, results2]).then(function(snaps) {
+        var names = [];
+        snaps[0].forEach(function(doc) {
+          names.push(doc.data().name);
+        });
+        expect(names).to.deep.equal([1, 2, 3, 'a', 'b', 'c']);
+
+        names = [];
+        snaps[1].forEach(function(doc) {
+          names.push(doc.data().name);
+        });
+        expect(names).to.deep.equal([1, 2, 3, 'c', 'b', 'a']);
+        done();
+      }).catch(done);
+    });
+
+    it('returns documents ordered by id', function(done) {
+      var results1 = collection.orderBy(Firestore.FieldPath.documentId()).get();
+      var results2 = collection.orderBy(Firestore.FieldPath.documentId(), 'desc').get();
+      db.flush();
+
+      Promise.all([results1, results2]).then(function(snaps) {
+        var names = [];
+        snaps[0].forEach(function(doc) {
+          names.push(doc.data().name);
+        });
+        expect(names).to.deep.equal([1, 2, 3, 'a', 'b', 'c']);
+
+        names = [];
+        snaps[1].forEach(function(doc) {
+          names.push(doc.data().name);
+        });
+        expect(names).to.deep.equal([1, 2, 3, 'c', 'b', 'a']);
+        done();
+      }).catch(done);
+    });
+
+    it('returns documents ordered by timestamp', function(done) {
+      db.collection('group').doc().create({
+        name: 'a',
+        date: Timestamp.fromMillis(1000)
+      }).catch(done);
+      db.flush();
+      db.collection('group').add({
+        name: 'b',
+        date: Timestamp.fromMillis(2000)
+      }).catch(done);
+      db.flush();
+
+      db.collection('group').orderBy('date', 'asc').get().then(function (snap) {
+        expect(snap.size).to.equal(2);
+        expect(snap.docs[0].data().name).to.equal('a');
+        expect(snap.docs[0].data().date).to.have.property('seconds');
+        expect(snap.docs[1].data().name).to.equal('b');
+        expect(snap.docs[1].data().date).to.have.property('seconds');
+
+        db.collection('group').orderBy('date', 'desc').get().then(function (snap) {
+          expect(snap.size).to.equal(2);
+          expect(snap.docs[0].data().name).to.equal('b');
+          expect(snap.docs[1].data().name).to.equal('a');
+          done();
+        }).catch(done);
+        db.flush();
+      }).catch(done);
+      db.flush();
+    });
+
+    it('returns documents ordered by date', function(done) {
+      db.collection('group').doc().create({
+        name: 'a',
+        date: new Date(1000)
+      }).catch(done);
+      db.flush();
+      db.collection('group').add({
+        name: 'b',
+        date: new Date(2000)
+      }).catch(done);
+      db.flush();
+
+      db.collection('group').orderBy('date', 'asc').get().then(function (snap) {
+        expect(snap.size).to.equal(2);
+        expect(snap.docs[0].data().name).to.equal('a');
+        expect(snap.docs[0].data().date).to.have.property('seconds');
+        expect(snap.docs[1].data().name).to.equal('b');
+        expect(snap.docs[1].data().date).to.have.property('seconds');
+
+        db.collection('group').orderBy('date', 'desc').get().then(function (snap) {
+          expect(snap.size).to.equal(2);
+          expect(snap.docs[0].data().name).to.equal('b');
+          expect(snap.docs[1].data().name).to.equal('a');
+          done();
+        }).catch(done);
+        db.flush();
+      }).catch(done);
+      db.flush();
+    });
+  });
+
+  describe('#startAfter', function () {
+    var doc2Snap;
+
+    beforeEach(function () {
+        db.autoFlush();
+
+        collection = db.collection('startAfter');
+        var doc2 = collection.doc();
+
+        collection.add({a: 1});
+        doc2.set({a: 2});
+        collection.add({a: 3});
+        collection.add({a: 4});
+        collection.add({a: 5});
+
+        return doc2.get().then(function (snap) {
+          doc2Snap = snap;
+        });
+    });
+
+    it('returns data after the specified value', function () {
+      return collection
+        .orderBy('a')
+        .startAfter(doc2Snap)
+        .get()
+        .then(function(snaps) {
+          expect(snaps.size).to.equal(3);
+          expect(snaps.docs.map(function (d) { return d.data().a; })).to.deep.equal([3, 4, 5]);
+        });
+    });
+
+    it('works with limit', function () {
+      return collection
+        .orderBy('a')
+        .startAfter(doc2Snap)
+        .limit(2)
+        .get()
+        .then(function(snaps) {
+          expect(snaps.size).to.equal(2);
+          expect(snaps.docs.map(function (d) { return  d.data().a; })).to.deep.equal([3, 4]);
+        });
+    });
+
+    it('throws with no order', function () {
+      expect(
+        function () {
+          collection.startAfter(doc2Snap);
+        }
+      ).to.throw();
+    });
   });
 
   describe('#limit', function () {
@@ -355,5 +527,127 @@ describe('MockFirestoreCollection', function () {
         expect(results4).to.eventually.have.property('size').to.equal(6)
       ]);
     });
+  });
+  describe('#listDocuments', function () {
+    it('retrieves all data for existing collection', function(done) {
+      db.autoFlush();
+      var keys = Object.keys(require('./data.json').collections);
+      collection.listDocuments().then(function(refs) {
+        expect(refs.length).to.equal(6);
+        refs.forEach(function(ref) {
+          expect(keys).to.contain(ref.id);
+        });
+        done();
+      }).catch(done);
+    });
+
+    it('retrieves data added to collection', function(done) {
+      db.autoFlush();
+      db.collection('group').add({
+        name: 'test'
+      });
+      db.collection('group').listDocuments().then(function(refs) {
+        expect(refs.length).to.equal(1);
+        refs[0].get().then(function(doc) {
+          expect(doc.data().name).to.equal('test');
+          done();
+        }).catch(done);
+      }).catch(done);
+    });
+  });
+
+  describe('#onSnapshot', function () {
+    it('returns value after collection is updated', function (done) {
+      var callCount = 0;
+      collection.onSnapshot(function(snap) {
+        callCount += 1;
+        var names = [];
+        snap.docs.forEach(function(doc) {
+          names.push(doc.data().name);
+        });
+
+        if (callCount === 2) {
+          expect(names).to.contain('A');
+          expect(names).not.to.contain('a');
+          done();
+        }
+      });
+      collection.doc('a').update({name: 'A'}, {setMerge: true});
+      collection.flush();
+    });
+
+    it('calls callback after multiple updates', function (done) {
+      var callCount = 0;
+      collection.onSnapshot(function(snap) {
+        callCount += 1;
+        var names = [];
+        snap.docs.forEach(function(doc) {
+          names.push(doc.data().name);
+        });
+
+        if (callCount === 2) {
+          expect(names).to.contain('A');
+          expect(names).not.to.contain('a');
+        }
+
+        if (callCount === 3) {
+          expect(names).to.contain('AA');
+          expect(names).not.to.contain('A');
+          done();
+        }
+      });
+
+      collection.doc('a').update({name: 'A'}, {setMerge: true});
+      collection.flush();
+      collection.doc('a').update({name: 'AA'}, {setMerge: true});
+      collection.flush();
+    });
+
+    it('should unsubscribe', function (done) {
+      var callCount = 0;
+      var unsubscribe = collection.onSnapshot(function(snap) {
+        callCount += 1;
+      });
+
+      collection.doc('a').update({name: 'A'}, {setMerge: true});
+      collection.flush();
+
+      process.nextTick(function() {
+        expect(callCount).to.equal(2);
+
+        collection.doc('a').update({name: 'AA'}, {setMerge: true});
+        unsubscribe();
+
+        collection.flush();
+
+        process.nextTick(function() {
+          expect(callCount).to.equal(2);
+          done();
+        });
+      });
+
+
+    });
+
+    it('Calls onError if error', function (done) {
+      var error = new Error("An error occured.");
+      collection.errs.onSnapshot = error;
+      var callCount = 0;
+      collection.onSnapshot(function(snap) {
+        throw new Error("This should not be called.");
+      }, function(err) {
+        // onSnapshot always returns when first called and then
+        // after data changes so we get 2 calls here.
+        if (callCount == 0) {
+          callCount++;
+          return;
+        }
+        expect(err).to.equal(error);
+        done();
+      });
+      collection.doc('a').update({name: 'A'}, {setMerge: true});
+      collection.flush();
+    });
+
   });
 });

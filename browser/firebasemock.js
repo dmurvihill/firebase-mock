@@ -1,4 +1,4 @@
-/** firebase-mock - v2.2.11
+/** firebase-mock - v2.3.0
 https://github.com/soumak77/firebase-mock
 * Copyright (c) 2016 Brian Soumakian
 * License: MIT */
@@ -496,7 +496,7 @@ var objectKeys = Object.keys || function (obj) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"util/":72}],2:[function(require,module,exports){
+},{"util/":73}],2:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -43213,6 +43213,1191 @@ module.exports = toArray;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],48:[function(require,module,exports){
+(function (global){
+/**
+ * lodash (Custom Build) <https://lodash.com/>
+ * Build: `lodash modularize exports="npm" -o ./`
+ * Copyright jQuery Foundation and other contributors <https://jquery.org/>
+ * Released under MIT license <https://lodash.com/license>
+ * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
+ * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+ */
+
+/** Used as the size to enable large array optimizations. */
+var LARGE_ARRAY_SIZE = 200;
+
+/** Used to stand-in for `undefined` hash values. */
+var HASH_UNDEFINED = '__lodash_hash_undefined__';
+
+/** Used as references for various `Number` constants. */
+var INFINITY = 1 / 0,
+    MAX_SAFE_INTEGER = 9007199254740991;
+
+/** `Object#toString` result references. */
+var argsTag = '[object Arguments]',
+    funcTag = '[object Function]',
+    genTag = '[object GeneratorFunction]';
+
+/**
+ * Used to match `RegExp`
+ * [syntax characters](http://ecma-international.org/ecma-262/7.0/#sec-patterns).
+ */
+var reRegExpChar = /[\\^$.*+?()[\]{}|]/g;
+
+/** Used to detect host constructors (Safari). */
+var reIsHostCtor = /^\[object .+?Constructor\]$/;
+
+/** Detect free variable `global` from Node.js. */
+var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
+
+/** Detect free variable `self`. */
+var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
+
+/** Used as a reference to the global object. */
+var root = freeGlobal || freeSelf || Function('return this')();
+
+/**
+ * A faster alternative to `Function#apply`, this function invokes `func`
+ * with the `this` binding of `thisArg` and the arguments of `args`.
+ *
+ * @private
+ * @param {Function} func The function to invoke.
+ * @param {*} thisArg The `this` binding of `func`.
+ * @param {Array} args The arguments to invoke `func` with.
+ * @returns {*} Returns the result of `func`.
+ */
+function apply(func, thisArg, args) {
+  switch (args.length) {
+    case 0: return func.call(thisArg);
+    case 1: return func.call(thisArg, args[0]);
+    case 2: return func.call(thisArg, args[0], args[1]);
+    case 3: return func.call(thisArg, args[0], args[1], args[2]);
+  }
+  return func.apply(thisArg, args);
+}
+
+/**
+ * A specialized version of `_.includes` for arrays without support for
+ * specifying an index to search from.
+ *
+ * @private
+ * @param {Array} [array] The array to inspect.
+ * @param {*} target The value to search for.
+ * @returns {boolean} Returns `true` if `target` is found, else `false`.
+ */
+function arrayIncludes(array, value) {
+  var length = array ? array.length : 0;
+  return !!length && baseIndexOf(array, value, 0) > -1;
+}
+
+/**
+ * This function is like `arrayIncludes` except that it accepts a comparator.
+ *
+ * @private
+ * @param {Array} [array] The array to inspect.
+ * @param {*} target The value to search for.
+ * @param {Function} comparator The comparator invoked per element.
+ * @returns {boolean} Returns `true` if `target` is found, else `false`.
+ */
+function arrayIncludesWith(array, value, comparator) {
+  var index = -1,
+      length = array ? array.length : 0;
+
+  while (++index < length) {
+    if (comparator(value, array[index])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Appends the elements of `values` to `array`.
+ *
+ * @private
+ * @param {Array} array The array to modify.
+ * @param {Array} values The values to append.
+ * @returns {Array} Returns `array`.
+ */
+function arrayPush(array, values) {
+  var index = -1,
+      length = values.length,
+      offset = array.length;
+
+  while (++index < length) {
+    array[offset + index] = values[index];
+  }
+  return array;
+}
+
+/**
+ * The base implementation of `_.findIndex` and `_.findLastIndex` without
+ * support for iteratee shorthands.
+ *
+ * @private
+ * @param {Array} array The array to inspect.
+ * @param {Function} predicate The function invoked per iteration.
+ * @param {number} fromIndex The index to search from.
+ * @param {boolean} [fromRight] Specify iterating from right to left.
+ * @returns {number} Returns the index of the matched value, else `-1`.
+ */
+function baseFindIndex(array, predicate, fromIndex, fromRight) {
+  var length = array.length,
+      index = fromIndex + (fromRight ? 1 : -1);
+
+  while ((fromRight ? index-- : ++index < length)) {
+    if (predicate(array[index], index, array)) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+/**
+ * The base implementation of `_.indexOf` without `fromIndex` bounds checks.
+ *
+ * @private
+ * @param {Array} array The array to inspect.
+ * @param {*} value The value to search for.
+ * @param {number} fromIndex The index to search from.
+ * @returns {number} Returns the index of the matched value, else `-1`.
+ */
+function baseIndexOf(array, value, fromIndex) {
+  if (value !== value) {
+    return baseFindIndex(array, baseIsNaN, fromIndex);
+  }
+  var index = fromIndex - 1,
+      length = array.length;
+
+  while (++index < length) {
+    if (array[index] === value) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+/**
+ * The base implementation of `_.isNaN` without support for number objects.
+ *
+ * @private
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is `NaN`, else `false`.
+ */
+function baseIsNaN(value) {
+  return value !== value;
+}
+
+/**
+ * Checks if a cache value for `key` exists.
+ *
+ * @private
+ * @param {Object} cache The cache to query.
+ * @param {string} key The key of the entry to check.
+ * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+ */
+function cacheHas(cache, key) {
+  return cache.has(key);
+}
+
+/**
+ * Gets the value at `key` of `object`.
+ *
+ * @private
+ * @param {Object} [object] The object to query.
+ * @param {string} key The key of the property to get.
+ * @returns {*} Returns the property value.
+ */
+function getValue(object, key) {
+  return object == null ? undefined : object[key];
+}
+
+/**
+ * Checks if `value` is a host object in IE < 9.
+ *
+ * @private
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a host object, else `false`.
+ */
+function isHostObject(value) {
+  // Many host objects are `Object` objects that can coerce to strings
+  // despite having improperly defined `toString` methods.
+  var result = false;
+  if (value != null && typeof value.toString != 'function') {
+    try {
+      result = !!(value + '');
+    } catch (e) {}
+  }
+  return result;
+}
+
+/**
+ * Converts `set` to an array of its values.
+ *
+ * @private
+ * @param {Object} set The set to convert.
+ * @returns {Array} Returns the values.
+ */
+function setToArray(set) {
+  var index = -1,
+      result = Array(set.size);
+
+  set.forEach(function(value) {
+    result[++index] = value;
+  });
+  return result;
+}
+
+/** Used for built-in method references. */
+var arrayProto = Array.prototype,
+    funcProto = Function.prototype,
+    objectProto = Object.prototype;
+
+/** Used to detect overreaching core-js shims. */
+var coreJsData = root['__core-js_shared__'];
+
+/** Used to detect methods masquerading as native. */
+var maskSrcKey = (function() {
+  var uid = /[^.]+$/.exec(coreJsData && coreJsData.keys && coreJsData.keys.IE_PROTO || '');
+  return uid ? ('Symbol(src)_1.' + uid) : '';
+}());
+
+/** Used to resolve the decompiled source of functions. */
+var funcToString = funcProto.toString;
+
+/** Used to check objects for own properties. */
+var hasOwnProperty = objectProto.hasOwnProperty;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var objectToString = objectProto.toString;
+
+/** Used to detect if a method is native. */
+var reIsNative = RegExp('^' +
+  funcToString.call(hasOwnProperty).replace(reRegExpChar, '\\$&')
+  .replace(/hasOwnProperty|(function).*?(?=\\\()| for .+?(?=\\\])/g, '$1.*?') + '$'
+);
+
+/** Built-in value references. */
+var Symbol = root.Symbol,
+    propertyIsEnumerable = objectProto.propertyIsEnumerable,
+    splice = arrayProto.splice,
+    spreadableSymbol = Symbol ? Symbol.isConcatSpreadable : undefined;
+
+/* Built-in method references for those with the same name as other `lodash` methods. */
+var nativeMax = Math.max;
+
+/* Built-in method references that are verified to be native. */
+var Map = getNative(root, 'Map'),
+    Set = getNative(root, 'Set'),
+    nativeCreate = getNative(Object, 'create');
+
+/**
+ * Creates a hash object.
+ *
+ * @private
+ * @constructor
+ * @param {Array} [entries] The key-value pairs to cache.
+ */
+function Hash(entries) {
+  var index = -1,
+      length = entries ? entries.length : 0;
+
+  this.clear();
+  while (++index < length) {
+    var entry = entries[index];
+    this.set(entry[0], entry[1]);
+  }
+}
+
+/**
+ * Removes all key-value entries from the hash.
+ *
+ * @private
+ * @name clear
+ * @memberOf Hash
+ */
+function hashClear() {
+  this.__data__ = nativeCreate ? nativeCreate(null) : {};
+}
+
+/**
+ * Removes `key` and its value from the hash.
+ *
+ * @private
+ * @name delete
+ * @memberOf Hash
+ * @param {Object} hash The hash to modify.
+ * @param {string} key The key of the value to remove.
+ * @returns {boolean} Returns `true` if the entry was removed, else `false`.
+ */
+function hashDelete(key) {
+  return this.has(key) && delete this.__data__[key];
+}
+
+/**
+ * Gets the hash value for `key`.
+ *
+ * @private
+ * @name get
+ * @memberOf Hash
+ * @param {string} key The key of the value to get.
+ * @returns {*} Returns the entry value.
+ */
+function hashGet(key) {
+  var data = this.__data__;
+  if (nativeCreate) {
+    var result = data[key];
+    return result === HASH_UNDEFINED ? undefined : result;
+  }
+  return hasOwnProperty.call(data, key) ? data[key] : undefined;
+}
+
+/**
+ * Checks if a hash value for `key` exists.
+ *
+ * @private
+ * @name has
+ * @memberOf Hash
+ * @param {string} key The key of the entry to check.
+ * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+ */
+function hashHas(key) {
+  var data = this.__data__;
+  return nativeCreate ? data[key] !== undefined : hasOwnProperty.call(data, key);
+}
+
+/**
+ * Sets the hash `key` to `value`.
+ *
+ * @private
+ * @name set
+ * @memberOf Hash
+ * @param {string} key The key of the value to set.
+ * @param {*} value The value to set.
+ * @returns {Object} Returns the hash instance.
+ */
+function hashSet(key, value) {
+  var data = this.__data__;
+  data[key] = (nativeCreate && value === undefined) ? HASH_UNDEFINED : value;
+  return this;
+}
+
+// Add methods to `Hash`.
+Hash.prototype.clear = hashClear;
+Hash.prototype['delete'] = hashDelete;
+Hash.prototype.get = hashGet;
+Hash.prototype.has = hashHas;
+Hash.prototype.set = hashSet;
+
+/**
+ * Creates an list cache object.
+ *
+ * @private
+ * @constructor
+ * @param {Array} [entries] The key-value pairs to cache.
+ */
+function ListCache(entries) {
+  var index = -1,
+      length = entries ? entries.length : 0;
+
+  this.clear();
+  while (++index < length) {
+    var entry = entries[index];
+    this.set(entry[0], entry[1]);
+  }
+}
+
+/**
+ * Removes all key-value entries from the list cache.
+ *
+ * @private
+ * @name clear
+ * @memberOf ListCache
+ */
+function listCacheClear() {
+  this.__data__ = [];
+}
+
+/**
+ * Removes `key` and its value from the list cache.
+ *
+ * @private
+ * @name delete
+ * @memberOf ListCache
+ * @param {string} key The key of the value to remove.
+ * @returns {boolean} Returns `true` if the entry was removed, else `false`.
+ */
+function listCacheDelete(key) {
+  var data = this.__data__,
+      index = assocIndexOf(data, key);
+
+  if (index < 0) {
+    return false;
+  }
+  var lastIndex = data.length - 1;
+  if (index == lastIndex) {
+    data.pop();
+  } else {
+    splice.call(data, index, 1);
+  }
+  return true;
+}
+
+/**
+ * Gets the list cache value for `key`.
+ *
+ * @private
+ * @name get
+ * @memberOf ListCache
+ * @param {string} key The key of the value to get.
+ * @returns {*} Returns the entry value.
+ */
+function listCacheGet(key) {
+  var data = this.__data__,
+      index = assocIndexOf(data, key);
+
+  return index < 0 ? undefined : data[index][1];
+}
+
+/**
+ * Checks if a list cache value for `key` exists.
+ *
+ * @private
+ * @name has
+ * @memberOf ListCache
+ * @param {string} key The key of the entry to check.
+ * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+ */
+function listCacheHas(key) {
+  return assocIndexOf(this.__data__, key) > -1;
+}
+
+/**
+ * Sets the list cache `key` to `value`.
+ *
+ * @private
+ * @name set
+ * @memberOf ListCache
+ * @param {string} key The key of the value to set.
+ * @param {*} value The value to set.
+ * @returns {Object} Returns the list cache instance.
+ */
+function listCacheSet(key, value) {
+  var data = this.__data__,
+      index = assocIndexOf(data, key);
+
+  if (index < 0) {
+    data.push([key, value]);
+  } else {
+    data[index][1] = value;
+  }
+  return this;
+}
+
+// Add methods to `ListCache`.
+ListCache.prototype.clear = listCacheClear;
+ListCache.prototype['delete'] = listCacheDelete;
+ListCache.prototype.get = listCacheGet;
+ListCache.prototype.has = listCacheHas;
+ListCache.prototype.set = listCacheSet;
+
+/**
+ * Creates a map cache object to store key-value pairs.
+ *
+ * @private
+ * @constructor
+ * @param {Array} [entries] The key-value pairs to cache.
+ */
+function MapCache(entries) {
+  var index = -1,
+      length = entries ? entries.length : 0;
+
+  this.clear();
+  while (++index < length) {
+    var entry = entries[index];
+    this.set(entry[0], entry[1]);
+  }
+}
+
+/**
+ * Removes all key-value entries from the map.
+ *
+ * @private
+ * @name clear
+ * @memberOf MapCache
+ */
+function mapCacheClear() {
+  this.__data__ = {
+    'hash': new Hash,
+    'map': new (Map || ListCache),
+    'string': new Hash
+  };
+}
+
+/**
+ * Removes `key` and its value from the map.
+ *
+ * @private
+ * @name delete
+ * @memberOf MapCache
+ * @param {string} key The key of the value to remove.
+ * @returns {boolean} Returns `true` if the entry was removed, else `false`.
+ */
+function mapCacheDelete(key) {
+  return getMapData(this, key)['delete'](key);
+}
+
+/**
+ * Gets the map value for `key`.
+ *
+ * @private
+ * @name get
+ * @memberOf MapCache
+ * @param {string} key The key of the value to get.
+ * @returns {*} Returns the entry value.
+ */
+function mapCacheGet(key) {
+  return getMapData(this, key).get(key);
+}
+
+/**
+ * Checks if a map value for `key` exists.
+ *
+ * @private
+ * @name has
+ * @memberOf MapCache
+ * @param {string} key The key of the entry to check.
+ * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+ */
+function mapCacheHas(key) {
+  return getMapData(this, key).has(key);
+}
+
+/**
+ * Sets the map `key` to `value`.
+ *
+ * @private
+ * @name set
+ * @memberOf MapCache
+ * @param {string} key The key of the value to set.
+ * @param {*} value The value to set.
+ * @returns {Object} Returns the map cache instance.
+ */
+function mapCacheSet(key, value) {
+  getMapData(this, key).set(key, value);
+  return this;
+}
+
+// Add methods to `MapCache`.
+MapCache.prototype.clear = mapCacheClear;
+MapCache.prototype['delete'] = mapCacheDelete;
+MapCache.prototype.get = mapCacheGet;
+MapCache.prototype.has = mapCacheHas;
+MapCache.prototype.set = mapCacheSet;
+
+/**
+ *
+ * Creates an array cache object to store unique values.
+ *
+ * @private
+ * @constructor
+ * @param {Array} [values] The values to cache.
+ */
+function SetCache(values) {
+  var index = -1,
+      length = values ? values.length : 0;
+
+  this.__data__ = new MapCache;
+  while (++index < length) {
+    this.add(values[index]);
+  }
+}
+
+/**
+ * Adds `value` to the array cache.
+ *
+ * @private
+ * @name add
+ * @memberOf SetCache
+ * @alias push
+ * @param {*} value The value to cache.
+ * @returns {Object} Returns the cache instance.
+ */
+function setCacheAdd(value) {
+  this.__data__.set(value, HASH_UNDEFINED);
+  return this;
+}
+
+/**
+ * Checks if `value` is in the array cache.
+ *
+ * @private
+ * @name has
+ * @memberOf SetCache
+ * @param {*} value The value to search for.
+ * @returns {number} Returns `true` if `value` is found, else `false`.
+ */
+function setCacheHas(value) {
+  return this.__data__.has(value);
+}
+
+// Add methods to `SetCache`.
+SetCache.prototype.add = SetCache.prototype.push = setCacheAdd;
+SetCache.prototype.has = setCacheHas;
+
+/**
+ * Gets the index at which the `key` is found in `array` of key-value pairs.
+ *
+ * @private
+ * @param {Array} array The array to inspect.
+ * @param {*} key The key to search for.
+ * @returns {number} Returns the index of the matched value, else `-1`.
+ */
+function assocIndexOf(array, key) {
+  var length = array.length;
+  while (length--) {
+    if (eq(array[length][0], key)) {
+      return length;
+    }
+  }
+  return -1;
+}
+
+/**
+ * The base implementation of `_.flatten` with support for restricting flattening.
+ *
+ * @private
+ * @param {Array} array The array to flatten.
+ * @param {number} depth The maximum recursion depth.
+ * @param {boolean} [predicate=isFlattenable] The function invoked per iteration.
+ * @param {boolean} [isStrict] Restrict to values that pass `predicate` checks.
+ * @param {Array} [result=[]] The initial result value.
+ * @returns {Array} Returns the new flattened array.
+ */
+function baseFlatten(array, depth, predicate, isStrict, result) {
+  var index = -1,
+      length = array.length;
+
+  predicate || (predicate = isFlattenable);
+  result || (result = []);
+
+  while (++index < length) {
+    var value = array[index];
+    if (depth > 0 && predicate(value)) {
+      if (depth > 1) {
+        // Recursively flatten arrays (susceptible to call stack limits).
+        baseFlatten(value, depth - 1, predicate, isStrict, result);
+      } else {
+        arrayPush(result, value);
+      }
+    } else if (!isStrict) {
+      result[result.length] = value;
+    }
+  }
+  return result;
+}
+
+/**
+ * The base implementation of `_.isNative` without bad shim checks.
+ *
+ * @private
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a native function,
+ *  else `false`.
+ */
+function baseIsNative(value) {
+  if (!isObject(value) || isMasked(value)) {
+    return false;
+  }
+  var pattern = (isFunction(value) || isHostObject(value)) ? reIsNative : reIsHostCtor;
+  return pattern.test(toSource(value));
+}
+
+/**
+ * The base implementation of `_.rest` which doesn't validate or coerce arguments.
+ *
+ * @private
+ * @param {Function} func The function to apply a rest parameter to.
+ * @param {number} [start=func.length-1] The start position of the rest parameter.
+ * @returns {Function} Returns the new function.
+ */
+function baseRest(func, start) {
+  start = nativeMax(start === undefined ? (func.length - 1) : start, 0);
+  return function() {
+    var args = arguments,
+        index = -1,
+        length = nativeMax(args.length - start, 0),
+        array = Array(length);
+
+    while (++index < length) {
+      array[index] = args[start + index];
+    }
+    index = -1;
+    var otherArgs = Array(start + 1);
+    while (++index < start) {
+      otherArgs[index] = args[index];
+    }
+    otherArgs[start] = array;
+    return apply(func, this, otherArgs);
+  };
+}
+
+/**
+ * The base implementation of `_.uniqBy` without support for iteratee shorthands.
+ *
+ * @private
+ * @param {Array} array The array to inspect.
+ * @param {Function} [iteratee] The iteratee invoked per element.
+ * @param {Function} [comparator] The comparator invoked per element.
+ * @returns {Array} Returns the new duplicate free array.
+ */
+function baseUniq(array, iteratee, comparator) {
+  var index = -1,
+      includes = arrayIncludes,
+      length = array.length,
+      isCommon = true,
+      result = [],
+      seen = result;
+
+  if (comparator) {
+    isCommon = false;
+    includes = arrayIncludesWith;
+  }
+  else if (length >= LARGE_ARRAY_SIZE) {
+    var set = iteratee ? null : createSet(array);
+    if (set) {
+      return setToArray(set);
+    }
+    isCommon = false;
+    includes = cacheHas;
+    seen = new SetCache;
+  }
+  else {
+    seen = iteratee ? [] : result;
+  }
+  outer:
+  while (++index < length) {
+    var value = array[index],
+        computed = iteratee ? iteratee(value) : value;
+
+    value = (comparator || value !== 0) ? value : 0;
+    if (isCommon && computed === computed) {
+      var seenIndex = seen.length;
+      while (seenIndex--) {
+        if (seen[seenIndex] === computed) {
+          continue outer;
+        }
+      }
+      if (iteratee) {
+        seen.push(computed);
+      }
+      result.push(value);
+    }
+    else if (!includes(seen, computed, comparator)) {
+      if (seen !== result) {
+        seen.push(computed);
+      }
+      result.push(value);
+    }
+  }
+  return result;
+}
+
+/**
+ * Creates a set object of `values`.
+ *
+ * @private
+ * @param {Array} values The values to add to the set.
+ * @returns {Object} Returns the new set.
+ */
+var createSet = !(Set && (1 / setToArray(new Set([,-0]))[1]) == INFINITY) ? noop : function(values) {
+  return new Set(values);
+};
+
+/**
+ * Gets the data for `map`.
+ *
+ * @private
+ * @param {Object} map The map to query.
+ * @param {string} key The reference key.
+ * @returns {*} Returns the map data.
+ */
+function getMapData(map, key) {
+  var data = map.__data__;
+  return isKeyable(key)
+    ? data[typeof key == 'string' ? 'string' : 'hash']
+    : data.map;
+}
+
+/**
+ * Gets the native function at `key` of `object`.
+ *
+ * @private
+ * @param {Object} object The object to query.
+ * @param {string} key The key of the method to get.
+ * @returns {*} Returns the function if it's native, else `undefined`.
+ */
+function getNative(object, key) {
+  var value = getValue(object, key);
+  return baseIsNative(value) ? value : undefined;
+}
+
+/**
+ * Checks if `value` is a flattenable `arguments` object or array.
+ *
+ * @private
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is flattenable, else `false`.
+ */
+function isFlattenable(value) {
+  return isArray(value) || isArguments(value) ||
+    !!(spreadableSymbol && value && value[spreadableSymbol]);
+}
+
+/**
+ * Checks if `value` is suitable for use as unique object key.
+ *
+ * @private
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is suitable, else `false`.
+ */
+function isKeyable(value) {
+  var type = typeof value;
+  return (type == 'string' || type == 'number' || type == 'symbol' || type == 'boolean')
+    ? (value !== '__proto__')
+    : (value === null);
+}
+
+/**
+ * Checks if `func` has its source masked.
+ *
+ * @private
+ * @param {Function} func The function to check.
+ * @returns {boolean} Returns `true` if `func` is masked, else `false`.
+ */
+function isMasked(func) {
+  return !!maskSrcKey && (maskSrcKey in func);
+}
+
+/**
+ * Converts `func` to its source code.
+ *
+ * @private
+ * @param {Function} func The function to process.
+ * @returns {string} Returns the source code.
+ */
+function toSource(func) {
+  if (func != null) {
+    try {
+      return funcToString.call(func);
+    } catch (e) {}
+    try {
+      return (func + '');
+    } catch (e) {}
+  }
+  return '';
+}
+
+/**
+ * Creates an array of unique values, in order, from all given arrays using
+ * [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
+ * for equality comparisons.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Array
+ * @param {...Array} [arrays] The arrays to inspect.
+ * @returns {Array} Returns the new array of combined values.
+ * @example
+ *
+ * _.union([2], [1, 2]);
+ * // => [2, 1]
+ */
+var union = baseRest(function(arrays) {
+  return baseUniq(baseFlatten(arrays, 1, isArrayLikeObject, true));
+});
+
+/**
+ * Performs a
+ * [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
+ * comparison between two values to determine if they are equivalent.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to compare.
+ * @param {*} other The other value to compare.
+ * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
+ * @example
+ *
+ * var object = { 'a': 1 };
+ * var other = { 'a': 1 };
+ *
+ * _.eq(object, object);
+ * // => true
+ *
+ * _.eq(object, other);
+ * // => false
+ *
+ * _.eq('a', 'a');
+ * // => true
+ *
+ * _.eq('a', Object('a'));
+ * // => false
+ *
+ * _.eq(NaN, NaN);
+ * // => true
+ */
+function eq(value, other) {
+  return value === other || (value !== value && other !== other);
+}
+
+/**
+ * Checks if `value` is likely an `arguments` object.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an `arguments` object,
+ *  else `false`.
+ * @example
+ *
+ * _.isArguments(function() { return arguments; }());
+ * // => true
+ *
+ * _.isArguments([1, 2, 3]);
+ * // => false
+ */
+function isArguments(value) {
+  // Safari 8.1 makes `arguments.callee` enumerable in strict mode.
+  return isArrayLikeObject(value) && hasOwnProperty.call(value, 'callee') &&
+    (!propertyIsEnumerable.call(value, 'callee') || objectToString.call(value) == argsTag);
+}
+
+/**
+ * Checks if `value` is classified as an `Array` object.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an array, else `false`.
+ * @example
+ *
+ * _.isArray([1, 2, 3]);
+ * // => true
+ *
+ * _.isArray(document.body.children);
+ * // => false
+ *
+ * _.isArray('abc');
+ * // => false
+ *
+ * _.isArray(_.noop);
+ * // => false
+ */
+var isArray = Array.isArray;
+
+/**
+ * Checks if `value` is array-like. A value is considered array-like if it's
+ * not a function and has a `value.length` that's an integer greater than or
+ * equal to `0` and less than or equal to `Number.MAX_SAFE_INTEGER`.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is array-like, else `false`.
+ * @example
+ *
+ * _.isArrayLike([1, 2, 3]);
+ * // => true
+ *
+ * _.isArrayLike(document.body.children);
+ * // => true
+ *
+ * _.isArrayLike('abc');
+ * // => true
+ *
+ * _.isArrayLike(_.noop);
+ * // => false
+ */
+function isArrayLike(value) {
+  return value != null && isLength(value.length) && !isFunction(value);
+}
+
+/**
+ * This method is like `_.isArrayLike` except that it also checks if `value`
+ * is an object.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an array-like object,
+ *  else `false`.
+ * @example
+ *
+ * _.isArrayLikeObject([1, 2, 3]);
+ * // => true
+ *
+ * _.isArrayLikeObject(document.body.children);
+ * // => true
+ *
+ * _.isArrayLikeObject('abc');
+ * // => false
+ *
+ * _.isArrayLikeObject(_.noop);
+ * // => false
+ */
+function isArrayLikeObject(value) {
+  return isObjectLike(value) && isArrayLike(value);
+}
+
+/**
+ * Checks if `value` is classified as a `Function` object.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a function, else `false`.
+ * @example
+ *
+ * _.isFunction(_);
+ * // => true
+ *
+ * _.isFunction(/abc/);
+ * // => false
+ */
+function isFunction(value) {
+  // The use of `Object#toString` avoids issues with the `typeof` operator
+  // in Safari 8-9 which returns 'object' for typed array and other constructors.
+  var tag = isObject(value) ? objectToString.call(value) : '';
+  return tag == funcTag || tag == genTag;
+}
+
+/**
+ * Checks if `value` is a valid array-like length.
+ *
+ * **Note:** This method is loosely based on
+ * [`ToLength`](http://ecma-international.org/ecma-262/7.0/#sec-tolength).
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a valid length, else `false`.
+ * @example
+ *
+ * _.isLength(3);
+ * // => true
+ *
+ * _.isLength(Number.MIN_VALUE);
+ * // => false
+ *
+ * _.isLength(Infinity);
+ * // => false
+ *
+ * _.isLength('3');
+ * // => false
+ */
+function isLength(value) {
+  return typeof value == 'number' &&
+    value > -1 && value % 1 == 0 && value <= MAX_SAFE_INTEGER;
+}
+
+/**
+ * Checks if `value` is the
+ * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
+ * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an object, else `false`.
+ * @example
+ *
+ * _.isObject({});
+ * // => true
+ *
+ * _.isObject([1, 2, 3]);
+ * // => true
+ *
+ * _.isObject(_.noop);
+ * // => true
+ *
+ * _.isObject(null);
+ * // => false
+ */
+function isObject(value) {
+  var type = typeof value;
+  return !!value && (type == 'object' || type == 'function');
+}
+
+/**
+ * Checks if `value` is object-like. A value is object-like if it's not `null`
+ * and has a `typeof` result of "object".
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
+ * @example
+ *
+ * _.isObjectLike({});
+ * // => true
+ *
+ * _.isObjectLike([1, 2, 3]);
+ * // => true
+ *
+ * _.isObjectLike(_.noop);
+ * // => false
+ *
+ * _.isObjectLike(null);
+ * // => false
+ */
+function isObjectLike(value) {
+  return !!value && typeof value == 'object';
+}
+
+/**
+ * This method returns `undefined`.
+ *
+ * @static
+ * @memberOf _
+ * @since 2.3.0
+ * @category Util
+ * @example
+ *
+ * _.times(2, _.noop);
+ * // => [undefined, undefined]
+ */
+function noop() {
+  // No operation performed.
+}
+
+module.exports = union;
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],49:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -43398,10 +44583,10 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],49:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 module.exports = require('./lib/_stream_duplex.js');
 
-},{"./lib/_stream_duplex.js":50}],50:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":51}],51:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -43526,7 +44711,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":52,"./_stream_writable":54,"core-util-is":58,"inherits":59,"process-nextick-args":60}],51:[function(require,module,exports){
+},{"./_stream_readable":53,"./_stream_writable":55,"core-util-is":59,"inherits":60,"process-nextick-args":61}],52:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -43574,7 +44759,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":53,"core-util-is":58,"inherits":59}],52:[function(require,module,exports){
+},{"./_stream_transform":54,"core-util-is":59,"inherits":60}],53:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -44592,7 +45777,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":50,"./internal/streams/BufferList":55,"./internal/streams/destroy":56,"./internal/streams/stream":57,"_process":48,"core-util-is":58,"events":6,"inherits":59,"isarray":12,"process-nextick-args":60,"safe-buffer":67,"string_decoder/":61,"util":3}],53:[function(require,module,exports){
+},{"./_stream_duplex":51,"./internal/streams/BufferList":56,"./internal/streams/destroy":57,"./internal/streams/stream":58,"_process":49,"core-util-is":59,"events":6,"inherits":60,"isarray":12,"process-nextick-args":61,"safe-buffer":68,"string_decoder/":62,"util":3}],54:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -44807,7 +45992,7 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":50,"core-util-is":58,"inherits":59}],54:[function(require,module,exports){
+},{"./_stream_duplex":51,"core-util-is":59,"inherits":60}],55:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -45487,7 +46672,7 @@ Writable.prototype._destroy = function (err, cb) {
   cb(err);
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":50,"./internal/streams/destroy":56,"./internal/streams/stream":57,"_process":48,"core-util-is":58,"inherits":59,"process-nextick-args":60,"safe-buffer":67,"util-deprecate":69}],55:[function(require,module,exports){
+},{"./_stream_duplex":51,"./internal/streams/destroy":57,"./internal/streams/stream":58,"_process":49,"core-util-is":59,"inherits":60,"process-nextick-args":61,"safe-buffer":68,"util-deprecate":70}],56:[function(require,module,exports){
 'use strict';
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -45567,7 +46752,7 @@ if (util && util.inspect && util.inspect.custom) {
     return this.constructor.name + ' ' + obj;
   };
 }
-},{"safe-buffer":67,"util":3}],56:[function(require,module,exports){
+},{"safe-buffer":68,"util":3}],57:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -45642,10 +46827,10 @@ module.exports = {
   destroy: destroy,
   undestroy: undestroy
 };
-},{"process-nextick-args":60}],57:[function(require,module,exports){
+},{"process-nextick-args":61}],58:[function(require,module,exports){
 module.exports = require('events').EventEmitter;
 
-},{"events":6}],58:[function(require,module,exports){
+},{"events":6}],59:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -45756,9 +46941,9 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../../../is-buffer/index.js")})
-},{"../../../../is-buffer/index.js":11}],59:[function(require,module,exports){
+},{"../../../../is-buffer/index.js":11}],60:[function(require,module,exports){
 arguments[4][10][0].apply(exports,arguments)
-},{"dup":10}],60:[function(require,module,exports){
+},{"dup":10}],61:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -45806,7 +46991,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 
 
 }).call(this,require('_process'))
-},{"_process":48}],61:[function(require,module,exports){
+},{"_process":49}],62:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('safe-buffer').Buffer;
@@ -46079,10 +47264,10 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"safe-buffer":67}],62:[function(require,module,exports){
+},{"safe-buffer":68}],63:[function(require,module,exports){
 module.exports = require('./readable').PassThrough
 
-},{"./readable":63}],63:[function(require,module,exports){
+},{"./readable":64}],64:[function(require,module,exports){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = exports;
 exports.Readable = exports;
@@ -46091,13 +47276,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":50,"./lib/_stream_passthrough.js":51,"./lib/_stream_readable.js":52,"./lib/_stream_transform.js":53,"./lib/_stream_writable.js":54}],64:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":51,"./lib/_stream_passthrough.js":52,"./lib/_stream_readable.js":53,"./lib/_stream_transform.js":54,"./lib/_stream_writable.js":55}],65:[function(require,module,exports){
 module.exports = require('./readable').Transform
 
-},{"./readable":63}],65:[function(require,module,exports){
+},{"./readable":64}],66:[function(require,module,exports){
 module.exports = require('./lib/_stream_writable.js');
 
-},{"./lib/_stream_writable.js":54}],66:[function(require,module,exports){
+},{"./lib/_stream_writable.js":55}],67:[function(require,module,exports){
 (function (process,global){
 /*!
  * @overview RSVP - a tiny implementation of Promises/A+.
@@ -48646,7 +49831,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":48}],67:[function(require,module,exports){
+},{"_process":49}],68:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -48710,7 +49895,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":5}],68:[function(require,module,exports){
+},{"buffer":5}],69:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -48839,7 +50024,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":6,"inherits":10,"readable-stream/duplex.js":49,"readable-stream/passthrough.js":62,"readable-stream/readable.js":63,"readable-stream/transform.js":64,"readable-stream/writable.js":65}],69:[function(require,module,exports){
+},{"events":6,"inherits":10,"readable-stream/duplex.js":50,"readable-stream/passthrough.js":63,"readable-stream/readable.js":64,"readable-stream/transform.js":65,"readable-stream/writable.js":66}],70:[function(require,module,exports){
 (function (global){
 
 /**
@@ -48910,16 +50095,16 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],70:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 arguments[4][10][0].apply(exports,arguments)
-},{"dup":10}],71:[function(require,module,exports){
+},{"dup":10}],72:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -49509,7 +50694,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":71,"_process":48,"inherits":70}],73:[function(require,module,exports){
+},{"./support/isBuffer":72,"_process":49,"inherits":71}],74:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -49588,7 +50773,7 @@ function extractName(path) {
 
 module.exports = MockAuthentication;
 
-},{"./firebase-auth":74,"./lodash":84,"./query":86,"./queue":87,"./snapshot":90,"./utils":96,"./validators":97,"assert":1,"firebase-auto-ids":8,"rsvp":66}],74:[function(require,module,exports){
+},{"./firebase-auth":75,"./lodash":86,"./query":88,"./queue":89,"./snapshot":92,"./utils":98,"./validators":99,"assert":1,"firebase-auto-ids":8,"rsvp":67}],75:[function(require,module,exports){
 'use strict';
 
 var _      = require('./lodash');
@@ -49666,9 +50851,7 @@ FirebaseAuth.prototype.getUser = function (uid, onComplete) {
     var user = null;
     err = err || self._validateExistingUid(uid);
     if (!err) {
-      user = _.find(self._auth.users, function(u) {
-        return u.uid == uid;
-      });
+      user = self._getUser(uid);
       if (onComplete) {
         onComplete(err, user.clone());
       }
@@ -49679,6 +50862,21 @@ FirebaseAuth.prototype.getUser = function (uid, onComplete) {
       }
       reject(err);
     }
+  });
+};
+
+FirebaseAuth.prototype.updateUser = function (newUser) {
+  const self = this;
+  return new Promise((resolve, reject) => {
+    this._defer('updateUser', _.toArray(arguments), () => {
+      const i = _.findIndex(self._auth.users, u => u.uid === newUser.uid);
+      if (i === -1) {
+        reject(new Error('Tried to update a nonexistent user'));
+      } else {
+        self._auth.users[i] = newUser.clone();
+        resolve(newUser);
+      }
+    });
   });
 };
 
@@ -49796,6 +50994,12 @@ FirebaseAuth.prototype._triggerAuthEvent = function () {
   });
 };
 
+FirebaseAuth.prototype._getUser = function (uid) {
+  return _.find(this._auth.users, function(u) {
+    return u.uid === uid;
+  });
+};
+
 FirebaseAuth.prototype.getAuth = function () {
   return this.currentUser;
 };
@@ -49870,7 +51074,8 @@ FirebaseAuth.prototype._createUser = function (method, credentials, onComplete) 
           phoneNumber: credentials.phoneNumber,
           emailVerified: credentials.emailVerified,
           displayName: credentials.displayName,
-          photoURL: credentials.photoURL
+          photoURL: credentials.photoURL,
+          _tokenValidity: credentials._tokenValidity
         });
         self._auth.users.push(user);
         if (onComplete) {
@@ -50170,7 +51375,7 @@ function validateArgument (method, object, position, name, type) {
 
 module.exports = FirebaseAuth;
 
-},{"./lodash":84,"./user":95,"rsvp":66,"util":72}],75:[function(require,module,exports){
+},{"./lodash":86,"./user":97,"rsvp":67,"util":73}],76:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -50901,7 +52106,7 @@ function render(datum) {
 
 module.exports = MockFirebase;
 
-},{"./firebase-auth":74,"./lodash":84,"./query":86,"./queue":87,"./snapshot":90,"./utils":96,"./validators":97,"assert":1,"firebase-auto-ids":8,"rsvp":66}],76:[function(require,module,exports){
+},{"./firebase-auth":75,"./lodash":86,"./query":88,"./queue":89,"./snapshot":92,"./utils":98,"./validators":99,"assert":1,"firebase-auto-ids":8,"rsvp":67}],77:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -50983,7 +52188,7 @@ function extractName(path) {
 
 module.exports = MockFirestoreCollection;
 
-},{"./firestore-query":82,"./lodash":84,"./queue":87,"./utils":96,"./validators":97,"assert":1,"firebase-auto-ids":8,"rsvp":66}],77:[function(require,module,exports){
+},{"./firestore-query":84,"./lodash":86,"./queue":89,"./utils":98,"./validators":99,"assert":1,"firebase-auto-ids":8,"rsvp":67}],78:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -51015,10 +52220,11 @@ function applyDelta(data, delta) {
 
 module.exports = MockFirestoreDeltaDocumentSnapshot;
 
-},{"./firestore-document-snapshot":78,"./lodash":84}],78:[function(require,module,exports){
+},{"./firestore-document-snapshot":79,"./lodash":86}],79:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
+var FieldPath = require('./firestore-field-path');
 
 function MockFirestoreDocumentSnapshot (id, ref, data) {
   this.id = id;
@@ -51028,12 +52234,23 @@ function MockFirestoreDocumentSnapshot (id, ref, data) {
     return _.cloneDeep(this._snapshotdata);
   };
   this.exists = this._snapshotdata !== null;
+  this.metadata = {
+    fromCache: true,
+    hasPendingWrites: false
+  };
 }
 
-MockFirestoreDocumentSnapshot.prototype.get = function (path) {
-  if (!path || !this.exists) return undefined;
+MockFirestoreDocumentSnapshot.prototype.get = function (field) {
+  if (!field || !this.exists) return undefined;
 
-  var parts = path.split('.');
+  var parts;
+  if (FieldPath.documentId().isEqual(field)) {
+    return this.id;
+  } else if (field instanceof FieldPath) {
+    parts = _.clone(field._path);
+  } else {
+    parts = field.split('.');
+  }
   var part = parts.shift();
   var data = this.data();
 
@@ -51051,7 +52268,7 @@ MockFirestoreDocumentSnapshot.prototype.get = function (path) {
 
 module.exports = MockFirestoreDocumentSnapshot;
 
-},{"./lodash":84}],79:[function(require,module,exports){
+},{"./firestore-field-path":81,"./lodash":86}],80:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -51207,6 +52424,7 @@ MockFirestoreDocument.prototype._update = function (changes, opts, callback) {
     self._defer('update', _.toArray(arguments), function () {
       if (!err) {
         var base = self._getData();
+        var original = _.cloneDeep(base);
         var data;
         if (_opts.setMerge) {
           data = _.merge(_.isObject(base) ? base : {}, changes);
@@ -51220,7 +52438,7 @@ MockFirestoreDocument.prototype._update = function (changes, opts, callback) {
             data = _.assign(_.isObject(base) ? base : {}, utils.updateToFirestoreObject(changes));
           }
         }
-        data = utils.removeEmptyFirestoreProperties(data);
+        data = utils.removeEmptyFirestoreProperties(data, original);
         self._dataChanged(data);
         resolve(data);
       } else {
@@ -51252,6 +52470,45 @@ MockFirestoreDocument.prototype.delete = function (callback) {
     });
   });
 };
+
+MockFirestoreDocument.prototype.onSnapshot = function (optionsOrObserverOrOnNext, observerOrOnNextOrOnError, onErrorArg) {
+  var err = this._nextErr('onSnapshot');
+  var self = this;
+  var onNext = optionsOrObserverOrOnNext;
+  var onError = observerOrOnNextOrOnError;
+  var includeMetadataChanges = optionsOrObserverOrOnNext.includeMetadataChanges;
+
+  if (includeMetadataChanges) {
+    // Note this doesn't truly mimic the firestore metadata changes behavior, however
+    // since everything is syncronous, there isn't any difference in behavior.
+    onNext = observerOrOnNextOrOnError;
+    onError = onErrorArg;
+  }
+  var context = {
+    data: self._getData(),
+  };
+  var onSnapshot = function (forceTrigger) {
+    // compare the current state to the one from when this function was created
+    // and send the data to the callback if different.
+    if (err === null) {
+      if (!_.isEqual(self.data, context.data) || includeMetadataChanges || forceTrigger) {
+        onNext(new DocumentSnapshot(self.id, self.ref, self._getData()));
+        context.data = self._getData();
+      }
+    } else {
+      onError(err);
+    }
+  };
+
+  // onSnapshot should always return when initially called, then
+  // every time data changes.
+  onSnapshot(true);
+  var unsubscribe = this.queue.onPostFlush(onSnapshot);
+
+  // return the unsubscribe function
+  return unsubscribe;
+};
+
 
 /**
  * Fetches the subcollections that are direct children of the document.
@@ -51328,11 +52585,38 @@ function extractName(path) {
 
 module.exports = MockFirestoreDocument;
 
-},{"./firestore-document-snapshot":78,"./lodash":84,"./queue":87,"./utils":96,"./validators":97,"assert":1,"firebase-auto-ids":8,"rsvp":66}],80:[function(require,module,exports){
+},{"./firestore-document-snapshot":79,"./lodash":86,"./queue":89,"./utils":98,"./validators":99,"assert":1,"firebase-auto-ids":8,"rsvp":67}],81:[function(require,module,exports){
 'use strict';
 
-function MockFirestoreFieldValue(type) {
+var _ = require('./lodash');
+
+function MockFirestoreFieldPath() {
+  this._path = [].slice.call(arguments);
+}
+
+MockFirestoreFieldPath.prototype.isEqual = function (other) {
+  if (other instanceof MockFirestoreFieldPath && _.isEqual(this._path, other._path)) {
+    return true;
+  }
+  return false;
+};
+
+MockFirestoreFieldPath.prototype._toString = function () {
+  return this._path.join('.');
+};
+
+MockFirestoreFieldPath.documentId = function () {
+  return new MockFirestoreFieldPath('_DOCUMENT_ID');
+};
+
+module.exports = MockFirestoreFieldPath;
+
+},{"./lodash":86}],82:[function(require,module,exports){
+'use strict';
+
+function MockFirestoreFieldValue(type, arg) {
   this.type = type;
+  this.arg = arg;
 }
 
 MockFirestoreFieldValue.prototype.isEqual = function (other) {
@@ -51350,9 +52634,17 @@ MockFirestoreFieldValue.serverTimestamp = function () {
   return new MockFirestoreFieldValue('serverTimestamp');
 };
 
+MockFirestoreFieldValue.arrayRemove = function (arg) {
+  return new MockFirestoreFieldValue('arrayRemove', arg);
+};
+
+MockFirestoreFieldValue.arrayUnion = function (arg) {
+  return new MockFirestoreFieldValue('arrayUnion', arg);
+};
+
 module.exports = MockFirestoreFieldValue;
 
-},{}],81:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -51382,18 +52674,18 @@ MockFirestoreQuerySnapshot.prototype.forEach = function (callback, context) {
 
 module.exports = MockFirestoreQuerySnapshot;
 
-},{"./firestore-document-snapshot":78,"./lodash":84}],82:[function(require,module,exports){
+},{"./firestore-document-snapshot":79,"./lodash":86}],84:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
-var assert = require('assert');
 var Stream = require('stream');
 var Promise = require('rsvp').Promise;
 var autoId = require('firebase-auto-ids');
+var FieldPath = require('./firestore-field-path');
 var QuerySnapshot = require('./firestore-query-snapshot');
+var DocumentSnapshot = require('./firestore-document-snapshot');
 var Queue = require('./queue').Queue;
 var utils = require('./utils');
-var validate = require('./validators');
 
 function MockFirestoreQuery(path, data, parent, name) {
   this.errs = {};
@@ -51407,6 +52699,7 @@ function MockFirestoreQuery(path, data, parent, name) {
   this.orderedProperties = [];
   this.orderedDirections = [];
   this.limited = 0;
+  this.buildStartFinder = function () { return function () { return true; }; };
   this._setData(data);
 }
 
@@ -51452,37 +52745,9 @@ MockFirestoreQuery.prototype.get = function () {
   var self = this;
   return new Promise(function (resolve, reject) {
     self._defer('get', _.toArray(arguments), function () {
-      var results = {};
-      var limit = 0;
-
+      var results = self._results();
       if (err === null) {
         if (_.size(self.data) !== 0) {
-          if (self.orderedProperties.length === 0) {
-            _.forEach(self.data, function(data, key) {
-              if (self.limited <= 0 || limit < self.limited) {
-                results[key] = _.cloneDeep(data);
-                limit++;
-              }
-            });
-          } else {
-            var queryable = [];
-            _.forEach(self.data, function(data, key) {
-              queryable.push({
-                data: data,
-                key: key
-              });
-            });
-
-            queryable = _.orderBy(queryable, _.map(self.orderedProperties, function(p) { return 'data.' + p; }), self.orderedDirections);
-
-            queryable.forEach(function(q) {
-              if (self.limited <= 0 || limit < self.limited) {
-                results[q.key] = _.cloneDeep(q.data);
-                limit++;
-              }
-            });
-          }
-
           resolve(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id), results));
         } else {
           resolve(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id)));
@@ -51495,111 +52760,215 @@ MockFirestoreQuery.prototype.get = function () {
 };
 
 MockFirestoreQuery.prototype.stream = function () {
-  var stream = new Stream();
+  var stream = new Stream.Transform({
+    objectMode: true,
+    transform: function (chunk, encoding, done) {
+      this.push(chunk);
+      done();
+    }
+  });
 
   this.get().then(function (snapshots) {
     snapshots.forEach(function (snapshot) {
-      stream.emit('data', snapshot);
+      stream.write(snapshot);
     });
-    stream.emit('end');
+    stream.end();
   });
 
   return stream;
 };
 
 MockFirestoreQuery.prototype.where = function (property, operator, value) {
-  var query;
-  console.log(property, operator, value);
-  if (_.size(this.data) !== 0) {
-    return new MockFirestoreQuery(this.path, null, this.parent, this.id);
-  }
-
-  switch (operator) {
-    case '==':
-      _.forEach(this.data, function(data, key) {
-        if (_.isEqual(_.get(data, property), value)) {
-          results[key] = _.cloneDeep(data);
-        }
-      });
-      break;
-
-    case '!=':
-      _.forEach(this.data, function(data, key) {
-        console.log(_.get(data, property), value, _.get(data, property) != value);
-        if (!_.isEqual(_.get(data, property), value)) {
-          results[key] = _.cloneDeep(data);
-        }
-      });
-      break;
-
-    case '>':
-      _.forEach(this.data, function(data, key) {
-        console.log(_.get(data, property), value, _.get(data, property) > value);
-        if (_.get(data, property) > value) {
-          results[key] = _.cloneDeep(data);
-        }
-      });
-      break;
-    case '>=':
-      _.forEach(this.data, function(data, key) {
-        console.log(_.get(data, property), value, _.get(data, property) >= value);
-        if (_.get(data, property) >= value) {
-          results[key] = _.cloneDeep(data);
-        }
-      });
-      break;
-
-    case '<':
-      _.forEach(this.data, function(data, key) {
-        console.log(_.get(data, property), value, _.get(data, property) < value);
-        if (_.get(data, property) < value) {
-          results[key] = _.cloneDeep(data);
-        }
-      });
-      break;
-
-    case '<=':
-      _.forEach(this.data, function(data, key) {
-        console.log(_.get(data, property), value, _.get(data, property) <= value);
-        if (_.get(data, property) <= value) {
-          results[key] = _.cloneDeep(data);
-        }
-      });
-      break;
-
-    default:
-      return new MockFirestoreQuery(this.path, null, this.parent, this.id);
-      break;
-  }
-
-  return new MockFirestoreQuery(this.path, results, this.parent, this.id);
-
+  var query = this.clone();
+  var path = getPropertyPath(property);
 
   // check if unsupported operator
-  if (operator !== '==') {
+  if (operator !== '==' && operator !== 'array-contains') {
     console.warn('Using unsupported where() operator for firebase-mock, returning entire dataset');
-    return this;
   } else {
     if (_.size(this.data) !== 0) {
       var results = {};
-
+      _.forEach(this.data, function(data, key) {
+        var queryable = { data: data, key: key };
+        switch (operator) {
+          case '==':
+            if (_.isEqual(_.get(queryable, path), value)) {
+              results[key] = _.cloneDeep(data);
+            }
+            break;
+          case 'array-contains':
+            if (_.includes(_.get(data, property), value)) {
+              results[key] = _.cloneDeep(data);
+            }
+            break;
+          default:
+            results[key] = _.cloneDeep(data);
+            break;
+        }
+      });
+      query._setData(results);
     } else {
-
+      query._setData(null);
     }
   }
+
+  return query;
 };
 
 MockFirestoreQuery.prototype.orderBy = function (property, direction) {
-  var query = new MockFirestoreQuery(this.path, this._getData(), this.parent, this.id);
+  var query = this.clone();
+
   query.orderedProperties.push(property);
   query.orderedDirections.push(direction || 'asc');
+
   return query;
 };
 
 MockFirestoreQuery.prototype.limit = function (limit) {
-  var query = new MockFirestoreQuery(this.path, this._getData(), this.parent, this.id);
+  var query = this.clone();
   query.limited = limit;
   return query;
+};
+
+MockFirestoreQuery.prototype.startAfter = function (doc) {
+  if (!(doc instanceof DocumentSnapshot)) {
+    console.warn('Using unsupported startAfter() parameter for firebase-mock, returning entire dataset');
+    return this;
+  }
+
+  if (this.orderedProperties.length === 0) {
+    throw new Error('Query must be ordered to paginate');
+  }
+
+  var query = this.clone();
+
+  query.buildStartFinder = function () {
+    var next = false;
+
+    return function (data, key) {
+      if (next) {
+        return true;
+      } else {
+        next = key === doc.ref.id;
+        return false;
+      }
+    };
+  };
+
+  return query;
+};
+
+MockFirestoreQuery.prototype.clone = function () {
+  var query = new MockFirestoreQuery(this.path, this._getData(), this.parent, this.id);
+
+  query.orderedProperties = Array.from(this.orderedProperties);
+  query.orderedDirections = Array.from(this.orderedDirections);
+  query.limited = this.limited;
+  query.buildStartFinder = this.buildStartFinder;
+
+  return query;
+};
+
+MockFirestoreQuery.prototype.onSnapshot = function (optionsOrObserverOrOnNext, observerOrOnNextOrOnError, onErrorArg) {
+  var err = this._nextErr('onSnapshot');
+  var self = this;
+  var onNext = optionsOrObserverOrOnNext;
+  var onError = observerOrOnNextOrOnError;
+  var includeMetadataChanges = optionsOrObserverOrOnNext.includeMetadataChanges;
+
+  if (includeMetadataChanges) {
+    // Note this doesn't truly mimic the firestore metadata changes behavior, however
+    // since everything is syncronous, there isn't any difference in behavior.
+    onNext = observerOrOnNextOrOnError;
+    onError = onErrorArg;
+  }
+  var context = {
+    data: self._results(),
+  };
+  var onSnapshot = function (forceTrigger) {
+    // compare the current state to the one from when this function was created
+    // and send the data to the callback if different.
+    if (err === null) {
+      if (forceTrigger) {
+        const results = self._results();
+        if (_.size(self.data) !== 0) {
+          onNext(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id), results));
+        } else {
+          onNext(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id)));
+        }
+      } else {
+        self.get().then(function (querySnapshot) {
+          var results = self._results();
+          if (!_.isEqual(results, context.data) || includeMetadataChanges) {
+            onNext(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id), results));
+            context.data = results;
+          }
+        });
+      }
+    } else {
+      onError(err);
+    }
+  };
+
+  // onSnapshot should always return when initially called, then
+  // every time data changes.
+  onSnapshot(true);
+  var unsubscribe = this.queue.onPostFlush(onSnapshot);
+
+  // return the unsubscribe function
+  return unsubscribe;
+};
+
+MockFirestoreQuery.prototype._results = function () {
+  var results = {};
+  var limit = 0;
+  var atStart = false;
+  var atEnd = false;
+  var startFinder = this.buildStartFinder();
+
+  var inRange = function(data, key) {
+    if (atEnd) {
+      return false;
+    } else if (atStart) {
+      return true;
+    } else {
+      atStart = startFinder(data, key);
+      return atStart;
+    }
+  };
+  if (_.size(this.data) === 0) {
+    return results;
+  }
+
+
+  var self = this;
+  if (this.orderedProperties.length === 0) {
+    _.forEach(this.data, function(data, key) {
+      if (inRange(data, key) && (self.limited <= 0 || limit < self.limited)) {
+        results[key] = _.cloneDeep(data);
+        limit++;
+      }
+    });
+  } else {
+    var queryable = [];
+    _.forEach(self.data, function(data, key) {
+      queryable.push({
+        data: data,
+        key: key
+      });
+    });
+
+    var orderBy = _.map(self.orderedProperties, getPropertyPath);
+    queryable = _.orderBy(queryable, orderBy, self.orderedDirections);
+    queryable.forEach(function(q) {
+      if (inRange(q.data, q.key) && (self.limited <= 0 || limit < self.limited)) {
+        results[q.key] = _.cloneDeep(q.data);
+        limit++;
+      }
+    });
+  }
+
+  return results;
 };
 
 MockFirestoreQuery.prototype._defer = function (sourceMethod, sourceArgs, callback) {
@@ -51627,9 +52996,19 @@ function extractName(path) {
   return ((path || '').match(/\/([^.$\[\]#\/]+)$/) || [null, null])[1];
 }
 
+function getPropertyPath(p) {
+  if (FieldPath.documentId().isEqual(p)) {
+    return 'key';
+  } else if (p instanceof FieldPath) {
+    return 'data.' + p._path.join('.');
+  } else {
+    return 'data.' + p;
+  }
+}
+
 module.exports = MockFirestoreQuery;
 
-},{"./firestore-query-snapshot":81,"./lodash":84,"./queue":87,"./utils":96,"./validators":97,"assert":1,"firebase-auto-ids":8,"rsvp":66,"stream":68}],83:[function(require,module,exports){
+},{"./firestore-document-snapshot":79,"./firestore-field-path":81,"./firestore-query-snapshot":83,"./lodash":86,"./queue":89,"./utils":98,"firebase-auto-ids":8,"rsvp":67,"stream":69}],85:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -51637,6 +53016,7 @@ var assert = require('assert');
 var Promise = require('rsvp').Promise;
 var CollectionReference = require('./firestore-collection');
 var DocumentReference = require('./firestore-document');
+var FieldPath = require('./firestore-field-path');
 var FieldValue = require('./firestore-field-value');
 var Queue = require('./queue').Queue;
 var utils = require('./utils');
@@ -51658,6 +53038,7 @@ function MockFirestore(path, data, parent, name) {
   this.data = _.cloneDeep(data) || null;
 }
 
+MockFirestore.FieldPath = FieldPath;
 MockFirestore.FieldValue = FieldValue;
 
 MockFirestore.prototype.flush = function (delay) {
@@ -51854,7 +53235,7 @@ function extractName(path) {
 
 module.exports = MockFirestore;
 
-},{"./firestore-collection":76,"./firestore-document":79,"./firestore-field-value":80,"./lodash":84,"./queue":87,"./utils":96,"./validators":97,"assert":1,"rsvp":66}],84:[function(require,module,exports){
+},{"./firestore-collection":77,"./firestore-document":80,"./firestore-field-path":81,"./firestore-field-value":82,"./lodash":86,"./queue":89,"./utils":98,"./validators":99,"assert":1,"rsvp":67}],86:[function(require,module,exports){
 module.exports = {
   assign: require('lodash.assign'),
   bind: require('lodash.bind'),
@@ -51890,10 +53271,11 @@ module.exports = {
   reduce: require('lodash.reduce'),
   remove: require('lodash.remove'),
   size: require('lodash.size'),
-  toArray: require('lodash.toarray')
+  toArray: require('lodash.toarray'),
+  union: require('lodash.union'),
 };
 
-},{"lodash.assign":13,"lodash.assignin":14,"lodash.bind":15,"lodash.clone":16,"lodash.clonedeep":17,"lodash.clonedeepwith":18,"lodash.compact":19,"lodash.difference":20,"lodash.every":21,"lodash.filter":22,"lodash.find":23,"lodash.findindex":24,"lodash.foreach":25,"lodash.forin":26,"lodash.get":27,"lodash.has":28,"lodash.includes":29,"lodash.indexof":30,"lodash.isempty":31,"lodash.isequal":32,"lodash.isfunction":33,"lodash.isnumber":34,"lodash.isobject":35,"lodash.isstring":36,"lodash.isundefined":37,"lodash.keys":38,"lodash.map":39,"lodash.merge":40,"lodash.noop":41,"lodash.orderby":42,"lodash.reduce":43,"lodash.remove":44,"lodash.set":45,"lodash.size":46,"lodash.toarray":47}],85:[function(require,module,exports){
+},{"lodash.assign":13,"lodash.assignin":14,"lodash.bind":15,"lodash.clone":16,"lodash.clonedeep":17,"lodash.clonedeepwith":18,"lodash.compact":19,"lodash.difference":20,"lodash.every":21,"lodash.filter":22,"lodash.find":23,"lodash.findindex":24,"lodash.foreach":25,"lodash.forin":26,"lodash.get":27,"lodash.has":28,"lodash.includes":29,"lodash.indexof":30,"lodash.isempty":31,"lodash.isequal":32,"lodash.isfunction":33,"lodash.isnumber":34,"lodash.isobject":35,"lodash.isstring":36,"lodash.isundefined":37,"lodash.keys":38,"lodash.map":39,"lodash.merge":40,"lodash.noop":41,"lodash.orderby":42,"lodash.reduce":43,"lodash.remove":44,"lodash.set":45,"lodash.size":46,"lodash.toarray":47,"lodash.union":48}],87:[function(require,module,exports){
 'use strict';
 
 function MockMessaging() {
@@ -51901,7 +53283,7 @@ function MockMessaging() {
 
 module.exports = MockMessaging;
 
-},{}],86:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -52088,7 +53470,7 @@ function assertQuery (method, pri, key) {
 
 module.exports = MockQuery;
 
-},{"./lodash":84,"./slice":89,"./utils":96,"./validators":97,"rsvp":66}],87:[function(require,module,exports){
+},{"./lodash":86,"./slice":91,"./utils":98,"./validators":99,"rsvp":67}],89:[function(require,module,exports){
 'use strict';
 
 var _            = require('./lodash');
@@ -52097,6 +53479,7 @@ var EventEmitter = require('events').EventEmitter;
 
 function FlushQueue () {
   this.events = [];
+  this.postFlushListeners = [];
 }
 
 FlushQueue.prototype.push = function () {
@@ -52114,6 +53497,14 @@ FlushQueue.prototype.push = function () {
   }));
 };
 
+FlushQueue.prototype.onPostFlush = function(subscriber) {
+  this.postFlushListeners.push(subscriber);
+  var self = this;
+  return function() {
+    self.postFlushListeners.pop(subscriber);
+  };
+};
+
 FlushQueue.prototype.flushing = false;
 
 FlushQueue.prototype.flush = function (delay) {
@@ -52124,6 +53515,9 @@ FlushQueue.prototype.flush = function (delay) {
   }
   function process () {
     self.flushing = true;
+    _.forEach(self.postFlushListeners, function (subscriber) {
+      self.push(subscriber);
+    });
     while (self.events.length) {
       self.events[0].run();
     }
@@ -52164,10 +53558,11 @@ FlushEvent.prototype.cancel = function () {
 exports.Queue = FlushQueue;
 exports.Event = FlushEvent;
 
-},{"./lodash":84,"events":6,"util":72}],88:[function(require,module,exports){
+},{"./lodash":86,"events":6,"util":73}],90:[function(require,module,exports){
 var MockAuthentication = require('./auth');
 var MockFirebase = require('./firebase');
 var MockFirestore = require('./firestore');
+var MockFieldPath = require('./firestore-field-path');
 var MockFieldValue = require('./firestore-field-value');
 var MockMessaging = require('./messaging');
 var MockStorage = require('./storage');
@@ -52243,6 +53638,7 @@ function MockFirebaseSdk(createDatabase, createAuth, createFirestore, createStor
   function MockFirebaseFirestore() {
     return createFirestore ? createFirestore() : new MockFirestore();
   }
+  MockFirebaseFirestore.FieldPath = MockFieldPath;
   MockFirebaseFirestore.FieldValue = MockFieldValue;
 
   function MockFirebaseStorage() {
@@ -52273,7 +53669,7 @@ function MockFirebaseSdk(createDatabase, createAuth, createFirestore, createStor
 
 module.exports = MockFirebaseSdk;
 
-},{"./auth":73,"./firebase":75,"./firestore":83,"./firestore-field-value":80,"./messaging":85,"./storage":94}],89:[function(require,module,exports){
+},{"./auth":74,"./firebase":76,"./firestore":85,"./firestore-field-path":81,"./firestore-field-value":82,"./messaging":87,"./storage":96}],91:[function(require,module,exports){
 'use strict';
 
 var _        = require('./lodash');
@@ -52477,7 +53873,7 @@ Slice.prototype._build = function(ref, rawData) {
 
 module.exports = Slice;
 
-},{"./lodash":84,"./snapshot":90,"./utils":96}],90:[function(require,module,exports){
+},{"./lodash":86,"./snapshot":92,"./utils":98}],92:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -52494,14 +53890,34 @@ function MockDataSnapshot (ref, data, priority) {
   };
 }
 
-MockDataSnapshot.prototype.child = function (key) {
-  var ref = this.ref.child(key);
+MockDataSnapshot.prototype.child = function (path) {
+  if (typeof path === 'number') path = String(path);
+  // Strip leading or trailing /
+  path = path.replace(/^\/|\/$/g, '');
+  var ref = this.ref.child(path);
   var data = null;
+  
+  var key;
+  var firstPathIdx = path.indexOf('/');
+  if (firstPathIdx === -1) {
+    // Single path
+    key = path;
+    path = null;
+  } else {
+    // Multiple paths
+    key = path.slice(0, firstPathIdx);
+    path = path.slice(firstPathIdx + 1);
+  }
   if (_.isObject(this._snapshotdata) && !_.isUndefined(this._snapshotdata[key])) {
     data = this._snapshotdata[key];
   }
-  var priority = this.ref.child(key).priority;
-  return new MockDataSnapshot(ref, data, priority);
+  var snapshot = new MockDataSnapshot(ref, data, ref.priority);
+  if (path === null) {
+    return snapshot;
+  } else {
+    // Look for child
+    return snapshot.child(path);
+  }
 };
 
 MockDataSnapshot.prototype.val = function () {
@@ -52520,7 +53936,7 @@ MockDataSnapshot.prototype.forEach = function (callback, context) {
 };
 
 MockDataSnapshot.prototype.hasChild = function (path) {
-  return !!(this._snapshotdata && this._snapshotdata[path]);
+  return this.child(path).exists();
 };
 
 MockDataSnapshot.prototype.hasChildren = function () {
@@ -52568,7 +53984,7 @@ function isValue (value) {
 
 module.exports = MockDataSnapshot;
 
-},{"./lodash":84}],91:[function(require,module,exports){
+},{"./lodash":86}],93:[function(require,module,exports){
 /*
   Mock for @google-cloud/storage Bucket
   https://cloud.google.com/nodejs/docs/reference/storage/1.6.x/Bucket
@@ -52586,7 +54002,7 @@ function MockStorageBucket(storage, name) {
 }
 
 MockStorageBucket.prototype.file = function (name) {
-  return new MockStorageFile(this, name);
+  return this.files[name] || new MockStorageFile(this, name);
 };
 
 MockStorageBucket.prototype.deleteFile = function (name) {
@@ -52629,7 +54045,7 @@ MockStorageBucket.prototype.moveFile = function (oldPath, newPath) {
 
 module.exports = MockStorageBucket;
 
-},{"./storage-file":92,"rsvp":66}],92:[function(require,module,exports){
+},{"./storage-file":94,"rsvp":67}],94:[function(require,module,exports){
 /*
   Mock for @google-cloud/storage File
   https://cloud.google.com/nodejs/docs/reference/storage/1.6.x/File
@@ -52721,7 +54137,7 @@ MockStorageFile.prototype.getMetadata = function() {
 
 module.exports = MockStorageFile;
 
-},{"./lodash":84,"fs":4,"rsvp":66}],93:[function(require,module,exports){
+},{"./lodash":86,"fs":4,"rsvp":67}],95:[function(require,module,exports){
 /*
   Mock for firebase.storage.Reference
   https://firebase.google.com/docs/reference/js/firebase.storage.Reference
@@ -52794,7 +54210,7 @@ MockStorageReference.prototype.putString = function(data) {
 
 module.exports = MockStorageReference;
 
-},{"rsvp":66}],94:[function(require,module,exports){
+},{"rsvp":67}],96:[function(require,module,exports){
 /*
   Mock for firebase.storage.Storage and admin.storage.Storage
   https://firebase.google.com/docs/reference/js/firebase.storage.Storage
@@ -52838,12 +54254,12 @@ MockStorage.prototype.ref = function(path) {
 };
 
 MockStorage.prototype.bucket = function(name) {
-  return new MockStorageBucket(this, name);
+  return this.buckets[name] || new MockStorageBucket(this, name);
 };
 
 module.exports = MockStorage;
 
-},{"./storage-bucket":91,"./storage-reference":93,"rsvp":66}],95:[function(require,module,exports){
+},{"./storage-bucket":93,"./storage-reference":95,"rsvp":67}],97:[function(require,module,exports){
 'use strict';
 
 var _ = require('./lodash');
@@ -52852,7 +54268,10 @@ var Promise = require('rsvp').Promise;
 function MockFirebaseUser(ref, data) {
   this._auth = ref;
   this._idtoken = Math.random().toString();
-  this.customClaims = {};
+  this._tokenValidity = _tokenValidity(
+    data._tokenValidity ? data._tokenValidity : {}
+  );
+  this.customClaims = data.customClaims || {};
   this.uid = data.uid;
   this.email = data.email;
   this.password = data.password;
@@ -52862,15 +54281,24 @@ function MockFirebaseUser(ref, data) {
   this.emailVerified = !!data.emailVerified;
   this.isAnonymous = !!data.isAnonymous;
   this.metadata = data.metadata;
-  this.providerData = data.providerData;
+  this.providerData = data.providerData || [];
   this.providerId = data.providerId;
   this.refreshToken = data.refreshToken;
 }
 
+MockFirebaseUser.msg_tokenExpiresBeforeIssuance =
+    'Auth token expires before it is issued';
+MockFirebaseUser.msg_tokenIssuedBeforeAuth =
+    'Auth token was issued before the user authenticated';
+MockFirebaseUser.msg_tokenAuthedInTheFuture =
+    'Auth token shows user authenticating in the future';
+MockFirebaseUser.msg_tokenIssuedInTheFuture =
+    'Auth token was issued in the future';
+
 MockFirebaseUser.prototype.clone = function () {
   var user = new MockFirebaseUser(this._auth, this);
   user._idtoken = this._idtoken;
-  user.customClaims = this.customClaims;
+  user.customClaims = _.cloneDeep(this.customClaims);
   return user;
 };
 
@@ -52951,15 +54379,90 @@ MockFirebaseUser.prototype.getIdToken = function (forceRefresh) {
   var self = this;
   return new Promise(function(resolve) {
     if (forceRefresh) {
-      self._idtoken = Math.random().toString();
+        self._refreshIdToken();
     }
     resolve(self._idtoken);
   });
 };
 
+MockFirebaseUser.prototype.toJSON = function() {
+  const json = {
+    uid: this.uid,
+    email: this.email,
+    emailVerified: this.emailVerified,
+    displayName: this.displayName,
+    photoURL: this.photoURL,
+    phoneNumber: this.phoneNumber,
+  };
+  if (this.metadata) {
+    json.createdAt = this.metadata.createdAt;
+    json.lastLoginAt = this.metadata.lastLoginAt;
+  }
+  json.providerData = [];
+  for (const entry of this.providerData) {
+    json.providerData.push(entry.toJSON());
+  }
+  return json;
+};
+
+MockFirebaseUser.prototype.getIdTokenResult = function (forceRefresh) {
+  if (forceRefresh) {
+    this._refreshIdToken();
+  }
+
+  return Promise.resolve({
+    authTime: this._tokenValidity.authTime.toISOString(),
+    issuedAtTime: this._tokenValidity.issuedAtTime.toISOString(),
+    expirationTime: this._tokenValidity.expirationTime.toISOString(),
+    signInProvider: this.providerId || null,
+    claims: this.customClaims,
+    token: this._idtoken,
+  });
+};
+
+MockFirebaseUser.prototype._refreshIdToken = function () {
+  this._tokenValidity.issuedAtTime = new Date();
+  this._tokenValidity.expirationTime = defaultExpirationTime(new Date());
+  this._idtoken = Math.random().toString();
+  return this._auth.updateUser(this)
+    .then(() => this.getIdTokenResult())
+    .catch(() => this.getIdTokenResult());
+};
+
+/** Create a user's internal token validity store
+ *
+ * @param data the `data.idTokenResult` object from the User constructor
+ * @return object that is to become the User's _tokenValidity member
+ */
+function _tokenValidity(data) {
+  const now = new Date();
+  const authTime = data.authTime ?
+    data.authTime : new Date();
+  const issuedTime = data.issuedAtTime || new Date(authTime.getTime());
+  const expirationTime = data.expirationTime ?
+      data.expirationTime : defaultExpirationTime(issuedTime);
+  if (expirationTime < issuedTime) {
+    throw new Error(MockFirebaseUser.msg_tokenExpiresBeforeIssuance);
+  } else if (issuedTime < authTime) {
+    throw new Error(MockFirebaseUser.msg_tokenIssuedBeforeAuth);
+  } else if (now < authTime) {
+    throw new Error(MockFirebaseUser.msg_tokenAuthedInTheFuture);
+  } else if (now < issuedTime) {
+    throw new Error(MockFirebaseUser.msg_tokenIssuedInTheFuture);
+  } else return {
+    authTime: authTime,
+    issuedAtTime: issuedTime,
+    expirationTime: expirationTime,
+  };
+}
+
+function defaultExpirationTime(issuedTime) {
+  return new Date(issuedTime.getTime() + 3600000);
+}
+
 module.exports = MockFirebaseUser;
 
-},{"./lodash":84,"rsvp":66}],96:[function(require,module,exports){
+},{"./lodash":86,"rsvp":67}],98:[function(require,module,exports){
 'use strict';
 
 var Snapshot = require('./snapshot');
@@ -53070,7 +54573,7 @@ exports.removeEmptyRtdbProperties = function removeEmptyRtdbProperties(obj) {
   }
 };
 
-exports.removeEmptyFirestoreProperties = function removeEmptyFirestoreProperties(obj) {
+exports.removeEmptyFirestoreProperties = function removeEmptyFirestoreProperties(obj, current) {
   var t = typeof obj;
   if (t === 'boolean' || t === 'string' || t === 'number' || t === 'undefined') {
     return obj;
@@ -53078,14 +54581,30 @@ exports.removeEmptyFirestoreProperties = function removeEmptyFirestoreProperties
   if (obj instanceof Date) return obj;
 
   var keys = getKeys(obj);
+
+  const doArrayRemove = function(replacement, sub) {
+    return current[sub].filter(function(e) {
+      return replacement.indexOf(e) === -1;
+    });
+  };
+
   if (keys.length > 0) {
     for (var s in obj) {
+
       var value = removeEmptyFirestoreProperties(obj[s]);
       if (FieldValue.delete().isEqual(value)) {
         delete obj[s];
       }
       if (FieldValue.serverTimestamp().isEqual(value)) {
         obj[s] = new Date();
+      }
+      if (FieldValue.arrayRemove().isEqual(value)) {
+        const replacement = Array.isArray(value.arg) ? value.arg : [value.arg];
+        obj[s] = doArrayRemove(replacement, s);
+      }
+      if (FieldValue.arrayUnion().isEqual(value)) {
+        const replacement = Array.isArray(value.arg) ? value.arg : [value.arg];
+        obj[s] = _.union(current[s], replacement);
       }
     }
   }
@@ -53169,7 +54688,7 @@ exports.createThenableReference = function(reference, promise) {
   return reference;
 };
 
-},{"./firestore-field-value":80,"./lodash":84,"./snapshot":90}],97:[function(require,module,exports){
+},{"./firestore-field-value":82,"./lodash":86,"./snapshot":92}],99:[function(require,module,exports){
 'use strict';
 
 var assert = require('assert');
@@ -53188,20 +54707,22 @@ exports.data = function(obj){
   var undefinedProperties = findUndefinedProperties(obj);
   assert(undefinedProperties.length === 0, 'Data contains undefined properties at ' + undefinedProperties);
 };
-},{"./utils":96,"assert":1,"util":72}],98:[function(require,module,exports){
+},{"./utils":98,"assert":1,"util":73}],100:[function(require,module,exports){
 'use strict';
 
 var MockFirestoreDeltaDocumentSnapshot = require('./firestore-delta-document-snapshot');
 
 exports.MockAuthentication = require('./auth');
+exports.MockUser = require('./user');
 exports.MockFirebase = require('./firebase');
 exports.MockFirebaseSdk = require('./sdk');
 exports.MockFirestore = require('./firestore');
 exports.MockStorage = require('./storage');
 exports.MockMessaging = require('./messaging');
 exports.DeltaDocumentSnapshot = MockFirestoreDeltaDocumentSnapshot.create;
+exports.DataSnapshot = require('./snapshot');
 
-},{"./auth":73,"./firebase":75,"./firestore":83,"./firestore-delta-document-snapshot":77,"./messaging":85,"./sdk":88,"./storage":94}]},{},[98])(98)
+},{"./auth":74,"./firebase":76,"./firestore":85,"./firestore-delta-document-snapshot":78,"./messaging":87,"./sdk":90,"./snapshot":92,"./storage":96,"./user":97}]},{},[100])(100)
 });
 ;(function (window) {
   'use strict';

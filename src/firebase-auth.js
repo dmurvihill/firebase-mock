@@ -9,6 +9,7 @@ function FirebaseAuth () {
   this.currentUser = null;
   this._auth = {
     listeners: [],
+    idTokenListeners: [],
     completionListeners: [],
     users: [],
     uidCounter: 1
@@ -17,10 +18,10 @@ function FirebaseAuth () {
 
 FirebaseAuth.prototype.changeAuthState = function (userData) {
   this._defer('changeAuthState', _.toArray(arguments), function() {
-    if (!_.isEqual(this.currentUser, userData)) {
-      this.currentUser = _.isObject(userData) ? userData : null;
-      this._triggerAuthEvent();
-    }
+    userData = _.isObject(userData) ? userData : null;
+    const oldUser = _.cloneDeep(this.currentUser);
+    this.currentUser = userData;
+    this._notify_state_listeners(oldUser);
   });
 };
 
@@ -29,7 +30,9 @@ FirebaseAuth.prototype.onAuthStateChanged = function (callback) {
   var currentUser = this.currentUser;
   this._auth.listeners.push({fn: callback});
 
+  callback.call(null, _.cloneDeep(currentUser));
   defer();
+
   return destroy;
 
   function destroy() {
@@ -43,6 +46,13 @@ FirebaseAuth.prototype.onAuthStateChanged = function (callback) {
       }
     });
   }
+};
+
+FirebaseAuth.prototype.onIdTokenChanged = function (callback) {
+  const currentUser = this.currentUser;
+  this._auth.idTokenListeners.push({fn: callback});
+  callback.call(null, _.cloneDeep(currentUser));
+  return () => this.offAuth(callback);
 };
 
 FirebaseAuth.prototype.getUserByEmail = function (email, onComplete) {
@@ -75,9 +85,7 @@ FirebaseAuth.prototype.getUser = function (uid, onComplete) {
     var user = null;
     err = err || self._validateExistingUid(uid);
     if (!err) {
-      user = _.find(self._auth.users, function(u) {
-        return u.uid == uid;
-      });
+      user = self._getUser(uid);
       if (onComplete) {
         onComplete(err, user.clone());
       }
@@ -88,6 +96,26 @@ FirebaseAuth.prototype.getUser = function (uid, onComplete) {
       }
       reject(err);
     }
+  });
+};
+
+FirebaseAuth.prototype.updateUser = function (newUser) {
+  const self = this;
+  return new Promise((resolve, reject) => {
+    this._defer('updateUser', _.toArray(arguments), () => {
+      const i = _.findIndex(self._auth.users, u => u.uid === newUser.uid);
+      if (i === -1) {
+        reject(new Error('Tried to update a nonexistent user'));
+      } else {
+        self._auth.users[i] = newUser.clone();
+        if (this.currentUser && this.currentUser.uid === newUser.uid) {
+          const oldUser = this.currentUser.clone();
+          this.currentUser = self._auth.users[i];
+          this._notify_state_listeners(oldUser);
+        }
+        resolve(newUser);
+      }
+    });
   });
 };
 
@@ -152,7 +180,7 @@ Object.keys(signinMethods)
     FirebaseAuth.prototype[method] = function () {
       var self = this;
       var user = getUser.apply(this, arguments);
-      var promise = new Promise(function(resolve, reject) {
+      return new Promise(function(resolve, reject) {
         self._authEvent(method, function(err) {
           if (err) reject(err);
           self.currentUser = user;
@@ -160,7 +188,6 @@ Object.keys(signinMethods)
           self._triggerAuthEvent();
         }, true);
       });
-      return promise;
     };
   });
 
@@ -203,6 +230,21 @@ FirebaseAuth.prototype._triggerAuthEvent = function () {
   listeners.forEach(function (parts) {
     parts.fn.call(parts.context, _.cloneDeep(user));
   });
+  this._triggerIdTokenEvent();
+};
+
+FirebaseAuth.prototype._triggerIdTokenEvent = function () {
+  var user = this.currentUser;
+  var listeners = _.cloneDeep(this._auth.idTokenListeners);
+  listeners.forEach(function (parts) {
+    parts.fn.call(parts.context, _.cloneDeep(user));
+  });
+};
+
+FirebaseAuth.prototype._getUser = function (uid) {
+  return _.find(this._auth.users, function(u) {
+    return u.uid === uid;
+  });
 };
 
 FirebaseAuth.prototype.getAuth = function () {
@@ -218,12 +260,11 @@ FirebaseAuth.prototype.onAuth = function (onComplete, context) {
 };
 
 FirebaseAuth.prototype.offAuth = function (onComplete, context) {
-  var index = _.findIndex(this._auth.listeners, function (listener) {
+  function shouldRemove(listener) {
     return listener.fn === onComplete && listener.context === context;
-  });
-  if (index > -1) {
-    this._auth.listeners.splice(index, 1);
   }
+  [this._auth.listeners, this._auth.idTokenListeners]
+    .forEach(event => _.remove(event, shouldRemove));
 };
 
 FirebaseAuth.prototype.unauth = function () {
@@ -235,7 +276,7 @@ FirebaseAuth.prototype.unauth = function () {
 
 FirebaseAuth.prototype.signOut = function () {
   var self = this, updateuser = this.currentUser !== null;
-  var promise = new Promise(function(resolve, reject) {
+  return new Promise(function(resolve, reject) {
     self._authEvent('signOut', function(err) {
       if (err) reject(err);
       self.currentUser = null;
@@ -246,7 +287,6 @@ FirebaseAuth.prototype.signOut = function () {
       }
     }, true);
   });
-  return promise;
 };
 
 FirebaseAuth.prototype.createUserWithEmailAndPassword = function (email, password) {
@@ -279,7 +319,8 @@ FirebaseAuth.prototype._createUser = function (method, credentials, onComplete) 
           phoneNumber: credentials.phoneNumber,
           emailVerified: credentials.emailVerified,
           displayName: credentials.displayName,
-          photoURL: credentials.photoURL
+          photoURL: credentials.photoURL,
+          _tokenValidity: credentials._tokenValidity
         });
         self._auth.users.push(user);
         if (onComplete) {
@@ -480,6 +521,46 @@ FirebaseAuth.prototype.setCustomUserClaims = function (uid, claims) {
   });
 };
 
+FirebaseAuth.prototype._notify_state_listeners = function (previousUser) {
+  const difference = scanDifference(previousUser, this.currentUser);
+  if (difference === 'different_user') {
+    this._triggerAuthEvent();
+  } else if(difference === 'different_token') {
+    this._triggerIdTokenEvent();
+  } else if (difference === 'same') {
+    // do nothing
+  } else {
+    throw new Error('Unexpected result from scanDifference');
+  }
+
+  function scanDifference(oldUser, newUser) {
+    if (_.isObject(oldUser)) {
+      if (_.isObject(newUser)) {
+        if (_.isEqual(oldUser, newUser)) {
+          return 'same';
+        } else {
+          return equalExceptToken(oldUser, newUser) ?
+            'different_token' : 'different_user';
+        }
+      } else {
+        return 'different_user';
+      }
+    } else {
+      return _.isObject(newUser) ? 'different_user' : 'same';
+    }
+  }
+
+  function equalExceptToken(user1, user2) {
+    const u1 = user1.clone();
+    const u2 = user2.clone();
+    delete u1._idtoken;
+    delete u1._tokenValidity;
+    delete u2._idtoken;
+    delete u2._tokenValidity;
+    return _.isEqual(u1, u2);
+  }
+};
+
 FirebaseAuth.prototype._nextUid = function () {
   return 'simplelogin:' + (this._auth.uidCounter++);
 };
@@ -487,7 +568,7 @@ FirebaseAuth.prototype._nextUid = function () {
 FirebaseAuth.prototype._validateNewUid = function (uid) {
   if (uid) {
     var user = _.find(this._auth.users, function(user) {
-      return user.uid == uid;
+      return user.uid === uid;
     });
     if (user) {
       var err = new Error('The provided uid is already in use by an existing user. Each user must have a unique uid.');
@@ -501,7 +582,7 @@ FirebaseAuth.prototype._validateNewUid = function (uid) {
 FirebaseAuth.prototype._validateExistingUid = function (uid) {
   if (uid) {
     var user = _.find(this._auth.users, function(user) {
-      return user.uid == uid;
+      return user.uid === uid;
     });
     if (!user) {
       var err = new Error('There is no existing user record corresponding to the provided identifier.');

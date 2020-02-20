@@ -6,7 +6,10 @@ var Promise = require('rsvp').Promise;
 function MockFirebaseUser(ref, data) {
   this._auth = ref;
   this._idtoken = Math.random().toString();
-  this.customClaims = {};
+  this._tokenValidity = _tokenValidity(
+    data._tokenValidity ? data._tokenValidity : {}
+  );
+  this.customClaims = data.customClaims || {};
   this.uid = data.uid;
   this.email = data.email;
   this.password = data.password;
@@ -16,15 +19,24 @@ function MockFirebaseUser(ref, data) {
   this.emailVerified = !!data.emailVerified;
   this.isAnonymous = !!data.isAnonymous;
   this.metadata = data.metadata;
-  this.providerData = data.providerData;
+  this.providerData = data.providerData || [];
   this.providerId = data.providerId;
   this.refreshToken = data.refreshToken;
 }
 
+MockFirebaseUser.msg_tokenExpiresBeforeIssuance =
+    'Auth token expires before it is issued';
+MockFirebaseUser.msg_tokenIssuedBeforeAuth =
+    'Auth token was issued before the user authenticated';
+MockFirebaseUser.msg_tokenAuthedInTheFuture =
+    'Auth token shows user authenticating in the future';
+MockFirebaseUser.msg_tokenIssuedInTheFuture =
+    'Auth token was issued in the future';
+
 MockFirebaseUser.prototype.clone = function () {
   var user = new MockFirebaseUser(this._auth, this);
   user._idtoken = this._idtoken;
-  user.customClaims = this.customClaims;
+  user.customClaims = _.cloneDeep(this.customClaims);
   return user;
 };
 
@@ -102,13 +114,83 @@ MockFirebaseUser.prototype.updateProfile = function (profile) {
 };
 
 MockFirebaseUser.prototype.getIdToken = function (forceRefresh) {
-  var self = this;
-  return new Promise(function(resolve) {
-    if (forceRefresh) {
-      self._idtoken = Math.random().toString();
-    }
-    resolve(self._idtoken);
+  return (forceRefresh ? this._refreshIdToken() : Promise.resolve())
+    .then(() => this._idtoken);
+};
+
+MockFirebaseUser.prototype.toJSON = function() {
+  const json = {
+    uid: this.uid,
+    email: this.email,
+    emailVerified: this.emailVerified,
+    displayName: this.displayName,
+    photoURL: this.photoURL,
+    phoneNumber: this.phoneNumber,
+  };
+  if (this.metadata) {
+    json.createdAt = this.metadata.createdAt;
+    json.lastLoginAt = this.metadata.lastLoginAt;
+  }
+  json.providerData = [];
+  for (const entry of this.providerData) {
+    json.providerData.push(entry.toJSON());
+  }
+  return json;
+};
+
+MockFirebaseUser.prototype.getIdTokenResult = function (forceRefresh) {
+  if (forceRefresh) {
+    this._refreshIdToken();
+  }
+
+  return Promise.resolve({
+    authTime: this._tokenValidity.authTime.toISOString(),
+    issuedAtTime: this._tokenValidity.issuedAtTime.toISOString(),
+    expirationTime: this._tokenValidity.expirationTime.toISOString(),
+    signInProvider: this.providerId || null,
+    claims: this.customClaims,
+    token: this._idtoken,
   });
 };
+
+MockFirebaseUser.prototype._refreshIdToken = function () {
+  this._tokenValidity.issuedAtTime = new Date();
+  this._tokenValidity.expirationTime = defaultExpirationTime(new Date());
+  this._idtoken = Math.random().toString();
+  return this._auth.updateUser(this)
+    .then(() => this.getIdTokenResult())
+    .catch(() => this.getIdTokenResult());
+};
+
+/** Create a user's internal token validity store
+ *
+ * @param data the `data.idTokenResult` object from the User constructor
+ * @return object that is to become the User's _tokenValidity member
+ */
+function _tokenValidity(data) {
+  const now = new Date();
+  const authTime = data.authTime ?
+    data.authTime : new Date();
+  const issuedTime = data.issuedAtTime || new Date(authTime.getTime());
+  const expirationTime = data.expirationTime ?
+      data.expirationTime : defaultExpirationTime(issuedTime);
+  if (expirationTime < issuedTime) {
+    throw new Error(MockFirebaseUser.msg_tokenExpiresBeforeIssuance);
+  } else if (issuedTime < authTime) {
+    throw new Error(MockFirebaseUser.msg_tokenIssuedBeforeAuth);
+  } else if (now < authTime) {
+    throw new Error(MockFirebaseUser.msg_tokenAuthedInTheFuture);
+  } else if (now < issuedTime) {
+    throw new Error(MockFirebaseUser.msg_tokenIssuedInTheFuture);
+  } else return {
+    authTime: authTime,
+    issuedAtTime: issuedTime,
+    expirationTime: expirationTime,
+  };
+}
+
+function defaultExpirationTime(issuedTime) {
+  return new Date(issuedTime.getTime() + 3600000);
+}
 
 module.exports = MockFirebaseUser;

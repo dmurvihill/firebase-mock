@@ -23,7 +23,7 @@ describe('Auth', function () {
   describe('#changeAuthState', function () {
 
     it('sets the auth data', function () {
-      var user = {};
+      var user = new User(ref, {});
       ref.changeAuthState(user);
       ref.flush();
       expect(ref.getAuth()).to.equal(user);
@@ -244,11 +244,9 @@ describe('Auth', function () {
       ref.onAuth(spy);
       expect(spy).to.have.been.calledWith(null);
     });
-
   });
 
   describe('#offAuth', function () {
-
     it('removes a callback', function () {
       ref.onAuth(spy);
       ref.changeAuthState({
@@ -268,18 +266,18 @@ describe('Auth', function () {
       var context = {};
       ref.onAuth(spy);
       ref.onAuth(spy, context);
-      ref.changeAuthState({
+      ref.changeAuthState(new User(ref, {
         uid: 'kato1'
-      });
+      }));
       ref.flush();
       expect(spy.callCount).to.equal(4);
       spy.reset();
       // will not match any context
       ref.offAuth(spy, {});
       ref.offAuth(spy, context);
-      ref.changeAuthState({
+      ref.changeAuthState(new User(ref, {
         uid: 'kato2'
-      });
+      }));
       ref.flush();
       expect(spy.callCount).to.equal(1);
     });
@@ -315,6 +313,147 @@ describe('Auth', function () {
       expect(spy.callCount).to.equal(0);
     });
 
+  });
+
+  function onAuthChangeSharedProperties(it, unsubscribe) {
+
+    it('is triggered when changeAuthState modifies the user', function () {
+      ref.changeAuthState({
+        uid: 'kato'
+      });
+      ref.flush();
+      expect(spy).to.have.been.calledWithMatch({
+        uid: 'kato'
+      });
+    });
+
+    it('is not triggered when auth state does not change', function () {
+      ref.changeAuthState({
+        uid: 'kato'
+      });
+      ref.flush();
+      spy.reset();
+      ref.changeAuthState({
+        uid: 'kato'
+      });
+      ref.flush();
+      expect(spy.called).to.equal(false);
+    });
+
+    it('synchronously triggers the callback with the current auth data', function () {
+      expect(spy).to.have.been.calledWith(null);
+    });
+
+    it('does not trigger after unsubscribe', function () {
+      unsubscribe();
+      spy.reset();
+      ref.changeAuthState(new User(ref, {
+        uid: 'kato',
+      }));
+      ref.flush();
+      expect(spy.callCount).to.equal(0);
+    });
+  }
+
+  describe('#onIdTokenChanged', () => {
+
+    let unsubscribe;
+
+    beforeEach(() => {
+      unsubscribe = ref.onIdTokenChanged(spy);
+    });
+
+    onAuthChangeSharedProperties(it, () => unsubscribe());
+
+    it('is triggered if only ID token changes', () => {
+      const user = new User(ref, {
+        uid: 'kato',
+        email: 'test@example.com',
+      });
+      ref.createUser(user);
+      ref.changeAuthState(user);
+      ref.flush();
+      spy.reset();
+      const userWithNewToken = user.clone();
+      userWithNewToken._idtoken = Math.random().toString();
+      ref.changeAuthState(userWithNewToken);
+      ref.flush();
+      expect(spy.called).to.equal(true);
+    });
+
+    it('is triggered on updating current user', () => {
+      const user = new User(ref, {
+        uid: 'kato',
+        email: 'test@example.com',
+      });
+      ref.createUser(user);
+      ref.changeAuthState(user);
+      ref.flush();
+      spy.reset();
+      const userWithNewToken = user.clone();
+      userWithNewToken._idtoken = Math.random().toString();
+      ref.updateUser(userWithNewToken);
+      ref.flush();
+      expect(spy.called).to.equal(true);
+    });
+
+    it('is not triggered on updating non-current user', () => {
+      const currentUser = new User(ref, {
+        uid: 'green hornet',
+        email: 'test@example.com',
+      });
+      const user = new User(ref, {
+        uid: 'kato',
+        email: 'test2@example.com',
+      });
+      ref.createUser(user);
+      ref.createUser(currentUser);
+      ref.changeAuthState(currentUser);
+      ref.flush();
+      spy.reset();
+      const userWithNewToken = user.clone();
+      userWithNewToken._idtoken = Math.random().toString();
+      ref.updateUser(userWithNewToken);
+      ref.flush();
+      expect(spy.called).to.equal(false);
+    });
+
+    it('is not triggered on updating current user with the same info', () => {
+      const user = new User(ref, {
+        uid: 'kato',
+        email: 'test@example.com',
+      });
+      ref.createUser(user);
+      ref.changeAuthState(user);
+      ref.flush();
+      spy.reset();
+      ref.updateUser(user.clone());
+      ref.flush();
+      expect(spy.called).to.equal(false);
+    });
+  });
+
+  describe('#onAuthStateChanged', function () {
+
+    let unsubscribe;
+
+    beforeEach(() => {
+      unsubscribe = ref.onAuthStateChanged(spy);
+    });
+
+    onAuthChangeSharedProperties(it, () => unsubscribe());
+
+    it('is not triggered if only ID token changes', () => {
+      const user = new User(ref, {
+        uid: 'kato'
+      });
+      ref.changeAuthState(user);
+      ref.flush();
+      spy.reset();
+      ref.autoFlush();
+      return user.getIdToken(true)
+        .then(() => expect(spy.called).to.equal(false));
+    });
   });
 
   describe('#createUser', function () {
@@ -377,18 +516,33 @@ describe('Auth', function () {
     });
 
     it('creates a new user with preset additional attributes', function () {
-      ref.createUser({
-        uid: 'uid1',
+      const uid = 'uid1';
+      const now = new Date().getTime();
+      const authTime = new Date(now - 1);
+      const issuedAtTime = new Date(now);
+      const expirationTime = new Date(now + 1);
+      ref.autoFlush();
+      return ref.createUser({
+        uid: uid,
         email: 'new1@new1.com',
         password: 'new1',
         displayName: 'new user 1',
         emailVerified: true,
-      }, spy);
-      ref.flush();
-      return Promise.all([
-        expect(ref.getUser('uid1')).to.eventually.have.property('displayName', 'new user 1'),
-        expect(ref.getUser('uid1')).to.eventually.have.property('emailVerified', true),
-      ]);
+        _tokenValidity: {
+          authTime: authTime,
+          issuedAtTime: issuedAtTime,
+          expirationTime: expirationTime,
+        },
+      }).then(() => Promise.all([
+        expect(ref.getUser(uid)).to.eventually.have.property('displayName', 'new user 1'),
+        expect(ref.getUser(uid)).to.eventually.have.property('emailVerified', true),
+        expect(ref.getUser(uid).then(u => u.getIdTokenResult()).then(t => t.authTime))
+          .to.eventually.equal(authTime.toISOString()),
+        expect(ref.getUser(uid).then(u => u.getIdTokenResult()).then(t => t.issuedAtTime))
+          .to.eventually.equal(issuedAtTime.toISOString()),
+        expect(ref.getUser(uid).then(u => u.getIdTokenResult()).then(t => t.expirationTime))
+          .to.eventually.equal(expirationTime.toISOString()),
+        ]));
     });
 
     it('fails if credentials is not an object', function () {
@@ -852,7 +1006,7 @@ describe('Auth', function () {
       return ref.createUser({
         email: 'kato@kato.com',
         password: 'kato'
-      }).then(function(user) {
+      }).then(function() {
         var err = new Error('custom error');
         ref.failNext('setCustomUserClaims', err);
         return expect(ref.setCustomUserClaims('uid', {
@@ -860,7 +1014,125 @@ describe('Auth', function () {
         })).to.be.rejectedWith(Error, 'custom error');
       });
     });
+  });
 
+
+  describe('#updateUser', () => {
+
+    beforeEach(() => {
+      ref.autoFlush();
+    });
+
+    it('should replace the existing user', () => {
+      const uid = 123;
+      const newUser = new User(ref, {
+        uid: uid,
+        email: 'test2@example.com',
+        providerId: 'test-provider-id',
+      });
+      return ref.createUser({
+        uid: uid,
+        email: 'test@example.com',
+      }).then(() => ref.updateUser(newUser))
+        .then(() => ref.getUser(uid))
+        .then(updatedUser => expect(updatedUser).to.deep.equal(newUser));
+    });
+
+    it('preserves deep equality of users', () => {
+      ref.createUser(new User(ref, {
+        uid: 'kato',
+        email: 'test@example.com',
+      }));
+      return ref.getUser('kato').then(oldUser => {
+        ref.updateUser(oldUser)
+          .then(ref.getUser('kato'))
+          .then(newUser => expect(expect(oldUser).to.deep.equal(newUser)));
+      });
+    });
+
+    it('should select by uid', () => {
+      const uid = 456;
+      const email = 'newEmail@example.com';
+      return ref.createUser({
+        uid: 123,
+        email: 'test1@example.com',
+      }).then(u1 =>
+        ref.createUser({
+          uid: uid,
+          email: 'test2@example.com',
+        }).then(() => ref.updateUser(new User(ref, {
+          uid: uid,
+          email: email,
+        }))).then(() => Promise.all([
+          expect(ref.getUser(123)).to.eventually.deep.equal(u1),
+          expect(ref.getUser(uid).then(u => u.email))
+            .to.eventually.deep.equal(email),
+        ]))
+      );
+    });
+
+    it('should return the updated user', () => {
+      const uid = 123;
+      const email = 'test2@example.com';
+      const newUser = new User(ref, {
+        uid: uid,
+        email: email,
+      });
+      return ref.createUser({
+        uid: uid,
+        email: 'test1@example.com',
+      }).then(() => ref.updateUser(newUser))
+        .then(rtn => expect(rtn).to.deep.equal(newUser));
+    });
+
+    it('should store a referentially different user from the argument', () => {
+      const uid = 123;
+      const email = 'test2@example.com';
+      const arg = new User(ref, {
+        uid: uid,
+        email: email,
+      });
+      return ref.createUser({
+        uid: uid,
+        email: 'test1@example.com',
+      }).then(() => ref.updateUser(arg))
+        .then(() => {
+          arg.email = 'test3@example.com';
+          return ref.getUser(uid);
+        })
+        .then(newUser => newUser.email)
+        .then(newEmail => expect(newEmail).to.equal(email));
+    });
+
+    it('should reject if the user does not exist', () => {
+      return expect(ref.updateUser(new User(ref, {
+        uid: 123,
+        email: 'test@example.com',
+      }))).to.be.rejectedWith('Tried to update a nonexistent user');
+    });
+
+    it('should wait for flush', () => {
+      const uid = 123;
+      const oldEmail = 'test1@example.com';
+      const newEmail = 'test2@example.com';
+      const newUser = new User(ref, {
+        uid: uid,
+        email: newEmail,
+      });
+      ref.createUser({
+        uid: uid,
+        email: oldEmail,
+      });
+      ref.autoFlush(false);
+      ref.updateUser(newUser);
+      const emailBeforeFlush = ref.getUser(uid).then(u => u.email);
+      ref.flush();
+      const emailAfterFlush = ref.getUser(uid).then(u => u.email);
+      return Promise.all([
+        expect(emailBeforeFlush).to.eventually.equal(oldEmail),
+        expect(emailAfterFlush).to.eventually.equal(newEmail),
+      ]);
+    });
   });
 
 });

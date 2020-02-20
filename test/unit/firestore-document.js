@@ -10,6 +10,7 @@ chai.use(require('sinon-chai'));
 var expect = chai.expect;
 var _ = require('../../src/lodash');
 var Firestore = require('../../').MockFirestore;
+var Firebase = require('../../').MockFirebase;
 
 describe('MockFirestoreDocument', function () {
 
@@ -94,9 +95,15 @@ describe('MockFirestoreDocument', function () {
 
   describe('#create', function () {
     it('creates a new doc', function (done) {
+      Firebase.setClock(function() {
+        return 1234567890123;
+      });
       var createDoc = db.doc('createDoc');
 
-      createDoc.create({prop: 'title'});
+      createDoc.create({prop: 'title'}).then(function (result) {
+        expect(result).to.have.property('writeTime');
+        expect(result.writeTime.seconds).to.equal(1234567890);
+      }).catch(done);
 
       createDoc.get().then(function (snap) {
         expect(snap.exists).to.equal(true);
@@ -115,6 +122,20 @@ describe('MockFirestoreDocument', function () {
       createDoc.get().then(function (snap) {
         expect(snap.exists).to.equal(true);
         expect(snap.get('prop')).to.equal(null);
+        done();
+      }).catch(done);
+
+      db.flush();
+    });
+
+    it('creates a new doc with server time values', function (done) {
+      var createDoc = db.doc('createDoc');
+
+      createDoc.create({serverTime: Firestore.FieldValue.serverTimestamp()});
+
+      createDoc.get().then(function (snap) {
+        expect(snap.exists).to.equal(true);
+        expect(snap.get('serverTime')).to.have.property('seconds');
         done();
       }).catch(done);
 
@@ -160,6 +181,34 @@ describe('MockFirestoreDocument', function () {
       doc.get().then(function(snap) {
         expect(snap.exists).to.equal(true);
         expect(snap.get('prop')).to.equal(null);
+        done();
+      }).catch(done);
+
+      db.flush();
+    });
+
+    it('sets value of doc with server timestamp', function (done) {
+      doc.set({
+        serverTime: Firestore.FieldValue.serverTimestamp()
+      });
+      doc.get().then(function(snap) {
+        expect(snap.exists).to.equal(true);
+        expect(snap.get('serverTime')).to.have.property('seconds');
+        done();
+      }).catch(done);
+
+      db.flush();
+    });
+
+    it('sets value of doc with ref', function (done) {
+      var ref = db.doc('ref');
+      ref.create();
+      doc.set({
+        ref: ref
+      });
+      doc.get().then(function(snap) {
+        expect(snap.exists).to.equal(true);
+        expect(snap.get('ref')).to.have.property('ref');
         done();
       }).catch(done);
 
@@ -254,7 +303,7 @@ describe('MockFirestoreDocument', function () {
 
       doc.get().then(function (snap) {
         expect(snap.exists).to.equal(true);
-        expect(snap.get('date').getTime()).to.equal(nextDate.getTime());
+        expect(snap.get('date').toDate().getTime()).to.equal(nextDate.getTime());
         done();
       }).catch(done);
 
@@ -299,6 +348,20 @@ describe('MockFirestoreDocument', function () {
       db.flush();
     });
 
+    it('updates value of doc with server time value', function (done) {
+      doc.update({
+        serverTime: Firestore.FieldValue.serverTimestamp()
+      });
+
+      doc.get().then(function (snap) {
+        expect(snap.exists).to.equal(true);
+        expect(snap.get('serverTime')).to.have.property('seconds');
+        done();
+      }).catch(done);
+
+      db.flush();
+    });
+
     it('removes property when using FieldValue.delete()', function (done) {
       doc.set({
         title: 'title2'
@@ -310,6 +373,40 @@ describe('MockFirestoreDocument', function () {
       doc.get().then(function (snap) {
         expect(snap.exists).to.equal(true);
         expect(snap.data()).to.deep.equal({});
+        done();
+      }).catch(done);
+
+      db.flush();
+    });
+
+    it('updates an array property when using FieldValue.arrayRemove()', function (done) {
+      doc.set({
+        titles: ['title1', 'title2']
+      });
+      doc.update({
+        titles: Firestore.FieldValue.arrayRemove('title2')
+      });
+
+      doc.get().then(function (snap) {
+        expect(snap.exists).to.equal(true);
+        expect(snap.data()).to.deep.equal({titles: ['title1']});
+        done();
+      }).catch(done);
+
+      db.flush();
+    });
+
+    it('updates an array property when using FieldValue.arrayUnion()', function (done) {
+      doc.set({
+        titles: ['title1']
+      });
+      doc.update({
+        titles: Firestore.FieldValue.arrayUnion('title2')
+      });
+
+      doc.get().then(function (snap) {
+        expect(snap.exists).to.equal(true);
+        expect(snap.data()).to.deep.equal({titles: ['title1', 'title2']});
         done();
       }).catch(done);
 
@@ -369,7 +466,7 @@ describe('MockFirestoreDocument', function () {
 
       doc.get()
         .then(function (snap) {
-          expect(snap.get('date').getTime()).to.equal(nextDate.getTime());
+          expect(snap.get('date').toDate().getTime()).to.equal(nextDate.getTime());
           done();
         })
         .catch(done);
@@ -460,6 +557,91 @@ describe('MockFirestoreDocument', function () {
           done();
         });
         db.flush();
+      });
+    });
+  });
+
+  describe('#onSnapshot', function () {
+    it('calls observer with initial state', function (done) {
+      doc.onSnapshot(function(snap) {
+        expect(snap.get('title')).to.equal('title');
+        done();
+      });
+    });
+
+    it('calls observer when document is updated', function (done) {
+      // onSnapshot calls immediately with the current state;
+      // we only care about the updated..
+      var first = true;
+      doc.onSnapshot(function(snap) {
+        if (!first) {
+          expect(snap.get('newTitle')).to.equal('A new title');
+          done();
+        }  
+
+        first = false;
+      });
+      doc.update({newTitle: 'A new title'}, {setMerge: true});
+      db.flush();
+    });
+
+    it('does not call observer when no changes occur', function (done) {
+      var first = true;
+      
+      doc.onSnapshot(function(snap) {
+        if (!first) throw new Error('Observer called unexpectedly!');
+        first = false;
+      });
+
+      doc.update({title: 'title'}, {setMerge: true});
+      db.flush();
+      done();
+    });
+
+    it('returns error if error occured', function (done) {
+      var error = new Error("An error occured.");
+      doc.errs.onSnapshot = error;
+      doc.onSnapshot(function(snap) {
+        throw new Error("This should not be called.");
+      }, function(err) {
+        expect(err).to.equal(error);
+        done();
+      });
+    });
+
+    it('does not returns value when not updated', function (done) {
+      var callCount = 0;
+      doc.onSnapshot(function(snap) {
+        callCount += 1;
+      });
+      doc.update({newTitle: 'A new title'}, {setMerge: true});
+      doc.flush();
+      expect(callCount).to.equal(2);
+      doc.get();
+      doc.flush();
+      expect(callCount).to.equal(2);
+      done();
+    });
+
+    it('unsubscribes', function (done) {
+      var callCount = 0;
+      var unsubscribe = doc.onSnapshot(function(snap) {
+        callCount += 1;
+      });
+      doc.update({newTitle: 'A new title'}, {setMerge: true});
+      doc.flush();
+      expect(callCount).to.equal(2);
+      doc.update({newTitle: 'A newer title'}, {setMerge: true});
+      unsubscribe();
+      doc.flush();
+      expect(callCount).to.equal(2);
+      done();
+    });
+
+    it('accepts option includeMetadataChanges', function (done) {
+      doc.onSnapshot({includeMetadataChanges: true}, function(snap) {
+        expect(snap.get('title')).to.equal('title');
+        done();
       });
     });
   });

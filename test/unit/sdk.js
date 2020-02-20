@@ -1,8 +1,6 @@
 'use strict';
 
-var sinon    = require('sinon');
 var expect   = require('chai').use(require('sinon-chai')).expect;
-var _        = require('../../src/lodash');
 var Authentication = require('../../').MockAuthentication;
 var Firebase = require('../../').MockFirebase;
 var MockFirebaseSdk = require('../../src/sdk');
@@ -99,6 +97,19 @@ describe('MockFirebaseSdk', function () {
 
     it('FieldValue.serverTimestamp', function () {
       expect(firebase.firestore.FieldValue.serverTimestamp).to.be.a('function');
+    });
+
+    it('FieldValue.arrayRemove', function () {
+      expect(firebase.firestore.FieldValue.arrayRemove).to.be.a('function');
+    });
+
+    it('FieldValue.arrayUnion', function () {
+      expect(firebase.firestore.FieldValue.arrayUnion).to.be.a('function');
+    });
+
+
+    it('FieldPath.documentId', function () {
+      expect(firebase.firestore.FieldPath.documentId).to.be.a('function');
     });
   });
 
@@ -216,5 +227,4 @@ describe('MockFirebaseSdk', function () {
         .that.is.an('function');
     });
   });
-
 });

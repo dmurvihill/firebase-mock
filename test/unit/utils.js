@@ -7,6 +7,8 @@ var removeEmptyRtdbProperties = require('../../src/utils').removeEmptyRtdbProper
 var removeEmptyFirestoreProperties = require('../../src/utils').removeEmptyFirestoreProperties;
 var updateToRtdbObject = require('../../src/utils').updateToRtdbObject;
 var updateToFirestoreObject = require('../../src/utils').updateToFirestoreObject;
+var Timestamp = require('../../src/timestamp');
+var priorityComparator = require('../../src/utils').priorityComparator;
 
 describe('utils', function () {
   describe('removeEmptyRtdbProperties', function () {
@@ -55,51 +57,56 @@ describe('utils', function () {
 
 
   describe('removeEmptyFirestoreProperties', function () {
-
+    var serverTime = Date.now();
     it('should return null, when the obj is empty', function () {
-      expect(removeEmptyFirestoreProperties({})).to.eql({});
+      expect(removeEmptyFirestoreProperties({}), serverTime).to.eql({});
     });
 
     it('should make no changes, when obj does not contain an empty property', function () {
-      expect(removeEmptyFirestoreProperties({a: 1})).to.eql({a: 1});
+      expect(removeEmptyFirestoreProperties({a: 1}, serverTime)).to.eql({a: 1});
     });
 
     it('should make no changes, when obj is a bool', function () {
-      expect(removeEmptyFirestoreProperties(true)).to.eql(true);
+      expect(removeEmptyFirestoreProperties(true, serverTime)).to.eql(true);
     });
 
     it('should make no changes, when obj is a string', function () {
-      expect(removeEmptyFirestoreProperties('hi')).to.eql('hi');
+      expect(removeEmptyFirestoreProperties('hi', serverTime)).to.eql('hi');
     });
 
     it('should make no changes, when obj is a number', function () {
-      expect(removeEmptyFirestoreProperties(123)).to.eql(123);
+      expect(removeEmptyFirestoreProperties(123, serverTime)).to.eql(123);
     });
 
     it('should make no changes, when obj is a Date', function () {
       var date = new Date();
-      expect(removeEmptyFirestoreProperties(date)).to.eql(date);
+      expect(removeEmptyFirestoreProperties(date, serverTime)).to.eql(date);
+    });
+
+    it('should make no changes, when obj is a Timestamp', function () {
+      var ts = new Timestamp(123, 123);
+      expect(removeEmptyFirestoreProperties(ts, serverTime)).to.eql(ts);
     });
 
     it('should make no changes, when obj is a NaN', function () {
-      expect(removeEmptyFirestoreProperties(NaN)).to.eql(NaN);
+      expect(removeEmptyFirestoreProperties(NaN, serverTime)).to.eql(NaN);
     });
 
     it('should make no changes, when obj is a undefined', function () {
-      expect(removeEmptyFirestoreProperties(undefined)).to.eql(undefined);
+      expect(removeEmptyFirestoreProperties(undefined, serverTime)).to.eql(undefined);
     });
 
     it('should remove property, when it is null', function () {
-      expect(removeEmptyFirestoreProperties({a: 1, b: null})).to.eql({a: 1, b: null});
+      expect(removeEmptyFirestoreProperties({a: 1, b: null}, serverTime)).to.eql({a: 1, b: null});
     });
     it('should remove property, when it is an empty object', function () {
-      expect(removeEmptyFirestoreProperties({a: 1, b: {}})).to.eql({a: 1, b: {}});
+      expect(removeEmptyFirestoreProperties({a: 1, b: {}}, serverTime)).to.eql({a: 1, b: {}});
     });
     it('should remove property, when it is an empty array', function () {
-      expect(removeEmptyFirestoreProperties({a: 1, b: []})).to.eql({a: 1, b: []});
+      expect(removeEmptyFirestoreProperties({a: 1, b: []}, serverTime)).to.eql({a: 1, b: []});
     });
     it('should return null, when all properties are null ', function () {
-      expect(removeEmptyFirestoreProperties({a: {b: null}})).to.eql({a: {b: null}});
+      expect(removeEmptyFirestoreProperties({a: {b: null}}, serverTime)).to.eql({a: {b: null}});
     });
   });
 
@@ -162,6 +169,45 @@ describe('utils', function () {
           }
         }
       });
+    });
+  });
+
+  describe('priorityComparator', function() {
+    // https://firebase.google.com/docs/database/web/lists-of-data#data-order
+    it('should give no priority to equal items', function() {
+      expect(priorityComparator('a', 'a')).to.eql(0);
+    });
+    it('should order null items first', function() {
+      expect(priorityComparator(null, 0)).to.eql(-1);
+      expect(priorityComparator(0, null)).to.eql(1);
+    });
+    it('should order false before true', function() {
+      expect(priorityComparator(false, true)).to.eql(-1);
+      expect(priorityComparator(true, false)).to.eql(1);
+    });
+    it('should order booleans before numbers', function() {
+      expect(priorityComparator(false, 0)).to.eql(-1);
+      expect(priorityComparator(true, 1)).to.eql(-1);
+      expect(priorityComparator(0, false)).to.eql(1);
+      expect(priorityComparator(1, true)).to.eql(1);
+    });
+    it('should order numbers before strings', function() {
+      expect(priorityComparator(5, 'foo')).to.eql(-1);
+      expect(priorityComparator(3, '3')).to.eql(-1);
+      expect(priorityComparator('foo', 0)).to.eql(1);
+      expect(priorityComparator('10', 10)).to.eql(1);
+    });
+    it('should order numbers in ascending order', function() {
+      expect(priorityComparator(4,5)).to.eql(-1);
+      expect(priorityComparator(5,4)).to.eql(1);
+      expect(priorityComparator(1,10)).to.eql(-1);
+      expect(priorityComparator(10,1)).to.eql(1);
+    });
+    it('should order strings lexicographically', function() {
+      expect(priorityComparator('bar', 'foo')).to.eql(-1);
+      expect(priorityComparator('foo', 'bar')).to.eql(1);
+      expect(priorityComparator('ant', 'art')).to.eql(-1);
+      expect(priorityComparator('art', 'ant')).to.eql(1);
     });
   });
 });
