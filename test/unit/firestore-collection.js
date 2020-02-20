@@ -216,8 +216,6 @@ describe('MockFirestoreCollection', function () {
       var results5 = collection.where('name_type', '==', 'number').get();
       var results6 = collection.where('name_type', '==', 'abc').get();
       var results7 = collection.where('value', '==', 3).get();
-      var results8 = collection.where(Firestore.FieldPath.documentId(), '==', '3').get();
-      var results9 = collection.where(new Firestore.FieldPath('name'), '==', 3).get();
       db.flush();
 
       return Promise.all([
@@ -228,8 +226,6 @@ describe('MockFirestoreCollection', function () {
         expect(results5).to.eventually.have.property('size').to.equal(3),
         expect(results6).to.eventually.have.property('size').to.equal(0),
         expect(results7).to.eventually.have.property('size').to.equal(0),
-        expect(results8).to.eventually.have.property('size').to.equal(1),
-        expect(results9).to.eventually.have.property('size').to.equal(1),
       ]);
     });
 
@@ -269,6 +265,26 @@ describe('MockFirestoreCollection', function () {
         expect(results1).to.eventually.have.property('size').to.equal(1),
         expect(results2).to.eventually.have.property('size').to.equal(1),
         expect(results3).to.eventually.have.property('size').to.equal(1)
+      ]);
+    });
+
+    it('accepts field path objects', function () {
+      const results1 = collection.where(new Firestore.FieldPath('name'), '==', 3).get();
+      const results2 = collection.where(new Firestore.FieldPath('name'), '<=', 3).get();
+      const results3 = collection.where(new Firestore.FieldPath('name'), '>=', 3).get();
+      const results4 = collection.where(new Firestore.FieldPath('name'), '!=', 3).get();
+      const results5 = collection.where(new Firestore.FieldPath('name'), '<', 3).get();
+      const results6 = collection.where(new Firestore.FieldPath('name'), '>', 3).get();
+      const results7 = collection.where(new Firestore.FieldPath('array'), 'array-contains', 'x').get();
+      db.flush();
+      return Promise.all([
+        expect(results1).to.eventually.have.property('size').to.equal(1),
+        expect(results2).to.eventually.have.property('size').to.equal(3),
+        expect(results3).to.eventually.have.property('size').to.equal(4),
+        expect(results4).to.eventually.have.property('size').to.equal(5),
+        expect(results5).to.eventually.have.property('size').to.equal(2),
+        expect(results6).to.eventually.have.property('size').to.equal(3),
+        expect(results7).to.eventually.have.property('size').to.equal(2),
       ]);
     });
   });

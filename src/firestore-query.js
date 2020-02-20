@@ -122,7 +122,8 @@ MockFirestoreQuery.prototype.where = function (property, operator, value) {
 
     case '!=':
       _.forEach(this.data, function(data, key) {
-        if (!_.isEqual(_.get(data, property), value)) {
+        const queryable = { data: data, key: key };
+        if (!_.isEqual(_.get(queryable, path), value)) {
           results[key] = _.cloneDeep(data);
         }
       });
@@ -130,7 +131,8 @@ MockFirestoreQuery.prototype.where = function (property, operator, value) {
 
     case '>':
       _.forEach(this.data, function(data, key) {
-        if (_.get(data, property) > value) {
+        const queryable = { data: data, key: key };
+        if (_.get(queryable, path) > value) {
           results[key] = _.cloneDeep(data);
         }
       });
@@ -138,7 +140,8 @@ MockFirestoreQuery.prototype.where = function (property, operator, value) {
 
     case '>=':
       _.forEach(this.data, function(data, key) {
-        if (_.get(data, property) >= value) {
+        const queryable = { data: data, key: key };
+        if (_.get(queryable, path) >= value) {
           results[key] = _.cloneDeep(data);
         }
       });
@@ -146,7 +149,8 @@ MockFirestoreQuery.prototype.where = function (property, operator, value) {
 
     case '<':
       _.forEach(this.data, function(data, key) {
-        if (_.get(data, property) < value) {
+        const queryable = { data: data, key: key };
+        if (_.get(queryable, path) < value) {
           results[key] = _.cloneDeep(data);
         }
       });
@@ -154,7 +158,8 @@ MockFirestoreQuery.prototype.where = function (property, operator, value) {
 
     case '<=':
       _.forEach(this.data, function(data, key) {
-        if (_.get(data, property) <= value) {
+        const queryable = { data: data, key: key };
+        if (_.get(queryable, path) <= value) {
           results[key] = _.cloneDeep(data);
         }
       });
@@ -162,7 +167,8 @@ MockFirestoreQuery.prototype.where = function (property, operator, value) {
 
     case 'array-contains':
       _.forEach(this.data, function(data, key) {
-        if (_.includes(_.get(data, property), value)) {
+        const queryable = { data: data, key: key };
+        if (_.includes(_.get(queryable, path), value)) {
           results[key] = _.cloneDeep(data);
         }
       });
