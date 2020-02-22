@@ -60,6 +60,18 @@ describe('FieldValue', function () {
     });
   });
 
+  describe('#increment', function () {
+    it('should be a function', function () {
+      expect(FieldValue.increment).to.be.a('function');
+    });
+    it('should return FieldValue', function () {
+      expect(FieldValue.increment()).to.be.instanceof(FieldValue);
+    });
+    it('should type to "serverTimestamp"', function () {
+      expect(FieldValue.increment()).to.have.property('type').to.equal('increment');
+    });
+  });
+
   describe('#isEqual', function () {
     it('should be a function', function () {
       expect(FieldValue.delete().isEqual).to.be.a('function');

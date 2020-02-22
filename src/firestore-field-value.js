@@ -28,4 +28,8 @@ MockFirestoreFieldValue.arrayUnion = function (arg) {
   return new MockFirestoreFieldValue('arrayUnion', arg);
 };
 
+MockFirestoreFieldValue.increment = function (arg) {
+  return new MockFirestoreFieldValue('increment', arg);
+};
+
 module.exports = MockFirestoreFieldValue;
