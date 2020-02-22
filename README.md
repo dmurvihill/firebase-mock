@@ -35,6 +35,7 @@ Firebase Mock supports the client-side [JavaScript API](https://firebase.google.
 * Authentication
   * [Basic](tutorials/admin/authentication.md)
   * [JWT Tokens](tutorials/admin/tokens.md)
+* [Messaging](tutorials/admin/messaging.md)
 * [Realtime Database](tutorials/admin/rtdb.md)
 * [Firestore](tutorials/admin/firestore.md)
 * [Storage](tutorials/admin/storage.md)

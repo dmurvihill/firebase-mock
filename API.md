@@ -19,6 +19,10 @@ Only `MockFirebase` methods are included here. For details on normal Firebase AP
 - [Server Timestamps](#server-timestamps)
   - [`setClock(fn)`](#firebasesetclockfn---undefined)
   - [`restoreClock()`](#firebasesetclockfn---undefined)
+- [Messaging](#messaging)
+  - [`respondNext(methodName, result)`](#respondnextmethodname-result---undefined)
+  - [`failNext(methodName, err)`](#failnextmethodname-err---undefined)
+  - [`on(methodName, callback)`](#onmethodname-callback---undefined)
 
 ## Core
 
@@ -242,3 +246,59 @@ Instead of using `Date.now()`, MockFirebase will call the `fn` you provide to ge
 ##### `Firebase.restoreClock()` -> `undefined`
 
 After calling `Firebase.setClock`, calling `Firebase.restoreClock` will restore the default timestamp behavior.
+
+## Messaging
+
+API reference of `MockMessaging`.
+
+##### `respondNext(methodName, result)` -> `undefined`
+
+When `methodName` is next invoked, the `Promise` (that is returned from the `methodName`) will be resolved with the specified `result`. This is useful for testing specific results of firebase messaging (e. g. partial success of sending messaging). The result will be triggered with the next `flush`.
+
+If no result is specified, `methodName` will resolve a default response.
+
+`result` must not be undefined.
+
+<hr>
+
+##### `failNext(methodName, err)` -> `undefined`
+
+When `methodName` is next invoked, the `Promise` will be rejected with the specified `err`. This is useful for simulating validation or any other errors. The error will be triggered with the next `flush`.
+
+`err` must be a proper `Error` object and not a string or any other primitive.
+
+<hr>
+
+##### `on(methodName, callback)` -> `undefined`
+
+When `methodName` is next invoked, the `callback` will be triggered. The callback gets an array as argument. The array contains all arguments, that were passed on invoking `methodName`. This is useful to assert the input arguments of `methodName`.
+
+See [docs.js](/test/unit/docs.js) for an example.
+
+## Messaging
+
+API reference of `MockMessaging`.
+
+##### `respondNext(methodName, result)` -> `undefined`
+
+When `methodName` is next invoked, the `Promise` (that is returned from the `methodName`) will be resolved with the specified `result`. This is useful for testing specific results of firebase messaging (e. g. partial success of sending messaging). The result will be triggered with the next `flush`.
+
+If no result is specified, `methodName` will resolve a default response.
+
+`result` must not be undefined.
+
+<hr>
+
+##### `failNext(methodName, err)` -> `undefined`
+
+When `methodName` is next invoked, the `Promise` will be rejected with the specified `err`. This is useful for simulating validation or any other errors. The error will be triggered with the next `flush`.
+
+`err` must be a proper `Error` object and not a string or any other primitive.
+
+<hr>
+
+##### `on(methodName, callback)` -> `undefined`
+
+When `methodName` is next invoked, the `callback` will be triggered. The callback gets an array as argument. The array contains all arguments, that were passed on invoking `methodName`. This is useful to assert the input arguments of `methodName`.
+
+See [docs.js](/test/unit/docs.js) for an example.
