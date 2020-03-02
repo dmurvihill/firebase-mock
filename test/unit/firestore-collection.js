@@ -649,5 +649,84 @@ describe('MockFirestoreCollection', function () {
       collection.flush();
     });
 
+    describe('snapshot#docChange', () => {
+      beforeEach(function () {
+        db.collection('docChange').doc('123').set({ name: 'A' });
+        db.collection('docChange').doc('456').set({ name: 'B' });
+        db.collection('docChange').flush();
+      })
+
+      it('should initially provide all collection results as "added"', () => {        
+        db.collection('docChange').onSnapshot(function(snap) {
+          const changes = [];
+          snap
+            .docChanges()
+            .forEach(ch =>
+              changes.push({ type: ch.type, data: ch.doc.data() })
+            );
+
+          expect(changes).to.deep.equal([
+            { type: 'added', data: { name: 'A' } },
+            { type: 'added', data: { name: 'B' } }
+          ]);
+        });
+      });
+
+      it('should show subsequently changed data as "modified"', function(done) {        
+        let callCount = 0;
+        db.collection('docChange').onSnapshot(function(snap) {
+          try {
+            const changes = [];
+
+            if (callCount++ !== 1) return;
+
+            snap
+              .docChanges()
+              .forEach(ch =>
+                changes.push({ type: ch.type, data: ch.doc.data() })
+              );
+
+            expect(changes).to.deep.equal([
+              { type: 'modified', data: { name: 'AA' } },
+            ]);
+            done();
+          }
+          catch(e) {
+            done(e);
+          }
+        });
+
+        db.collection('docChange').doc('123').set({ name: 'AA' });
+        db.flush();        
+      });
+
+      it('should show subsequently removed data as "removed"', function(done) {        
+        let callCount = 0;
+        db.collection('docChange').onSnapshot(function(snap) {
+          try {
+            const changes = [];
+
+            if (callCount++ !== 1) return;
+
+            snap
+              .docChanges()
+              .forEach(ch =>
+                changes.push({ type: ch.type, data: ch.doc.data() })
+              );
+
+            expect(changes).to.deep.equal([
+              { type: 'removed', data: { name: 'A' } },
+            ]);
+            done();
+          }
+          catch(e) {
+            done(e);
+          }
+        });
+
+        db.collection('docChange').doc('123').delete();
+        db.flush();        
+      })
+    });
   });
 });

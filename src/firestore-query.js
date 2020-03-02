@@ -208,14 +208,14 @@ MockFirestoreQuery.prototype.onSnapshot = function (optionsOrObserverOrOnNext, o
   var context = {
     data: self._results(),
   };
-  var onSnapshot = function (forceTrigger) {
+  var onSnapshot = function (initialCall) {
     // compare the current state to the one from when this function was created
     // and send the data to the callback if different.
     if (err === null) {
-      if (forceTrigger) {
+      if (initialCall) {
         const results = self._results();
         if (_.size(self.data) !== 0) {
-          onNext(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id), results));
+          onNext(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id), results, {}));
         } else {
           onNext(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id)));
         }
@@ -223,7 +223,7 @@ MockFirestoreQuery.prototype.onSnapshot = function (optionsOrObserverOrOnNext, o
         self.get().then(function (querySnapshot) {
           var results = self._results();
           if (!_.isEqual(results, context.data) || includeMetadataChanges) {
-            onNext(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id), results));
+            onNext(new QuerySnapshot(self.parent === null ? self : self.parent.collection(self.id), results, context.data));
             context.data = results;
           }
         });
