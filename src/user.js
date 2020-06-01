@@ -168,12 +168,12 @@ MockFirebaseUser.prototype._refreshIdToken = function () {
  * @return object that is to become the User's _tokenValidity member
  */
 function _tokenValidity(data) {
-  const now = new Date();
   const authTime = data.authTime ?
     data.authTime : new Date();
   const issuedTime = data.issuedAtTime || new Date(authTime.getTime());
   const expirationTime = data.expirationTime ?
       data.expirationTime : defaultExpirationTime(issuedTime);
+  const now = new Date();
   if (expirationTime < issuedTime) {
     throw new Error(MockFirebaseUser.msg_tokenExpiresBeforeIssuance);
   } else if (issuedTime < authTime) {
