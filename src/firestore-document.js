@@ -165,9 +165,14 @@ MockFirestoreDocument.prototype._update = function (changes, opts, callback) {
           data = _.merge(_.isObject(base) ? base : {}, changes);
         } else {
           // check if changes contain no nested objects
-          if (_.every(Object.keys(changes), function(key) { return !_.isObject(changes[key]); })) {
+          if (_.every(Object.keys(changes), function(key) { return !_.isPlainObject(changes[key])})) {
             // allow data to be merged, which allows merging of nested data
-            data = _.merge(_.isObject(base) ? base : {}, utils.updateToFirestoreObject(changes));
+            data = _.mergeWith(_.isObject(base) ? base : {}, utils.updateToFirestoreObject(changes), function customizer(newValue, srcValue, key, object, source) {
+              // arrays should be applied as-is
+              if (_.isArray(srcValue)) return srcValue;              
+              // resolve any FieldValue operations
+              return utils.doFieldValueOp(newValue, srcValue, utils.getServerTime());
+            });
           } else {
             // don't allow data to be merged, which overwrite nested data
             data = _.assign(_.isObject(base) ? base : {}, utils.updateToFirestoreObject(changes));

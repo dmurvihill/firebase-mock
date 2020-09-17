@@ -133,6 +133,31 @@ exports.removeEmptyRtdbProperties = function removeEmptyRtdbProperties(obj) {
   }
 };
 
+exports.doFieldValueOp = function doFieldValueOp(objValue, op, serverTime) {
+  if (!_.isObject(op)) return;
+
+  if (FieldValue.serverTimestamp().isEqual(op)) 
+    return new Date(serverTime);
+
+  if (op instanceof Timestamp) 
+    return op.toDate();
+
+  if (FieldValue.arrayRemove().isEqual(op)) {
+    const replacement = Array.isArray(op.arg) ? op.arg : [op.arg];
+    return objValue.filter(v => !replacement.includes(v));
+  }
+
+  if (FieldValue.arrayUnion().isEqual(op)) {
+    const replacement = Array.isArray(op.arg) ? op.arg : [op.arg];
+    return _.union(objValue, replacement);
+  }
+  
+  if (FieldValue.increment().isEqual(op)) 
+    return objValue == null ? op.arg : objValue + op.arg
+
+}
+
+
 exports.removeEmptyFirestoreProperties = function removeEmptyFirestoreProperties(obj, current, serverTime) {
   if (!_.isPlainObject(obj)) {
     return obj;

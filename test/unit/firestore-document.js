@@ -517,6 +517,54 @@ describe('MockFirestoreDocument', function () {
       db.flush();
     });
 
+    it('updates nested array properties when using FieldValue.arrayRemove', function(done) {
+      doc.set({
+        nested: {
+          prop1: 'prop1',
+          ar: ['a', 'b']
+        }
+      });
+
+      doc.update({
+        'nested.ar': Firestore.FieldValue.arrayRemove('b')
+      });
+
+      doc.get().then(function (snap) {
+        expect(snap.get('nested')).to.deep.equal({
+          prop1: 'prop1',
+          ar: ['a']
+        });
+        done();
+      }).catch(done);
+
+      db.flush();
+    })
+
+
+    it('removes nested property when using FieldValue.delete()', function (done) {
+      doc.set({
+        nested: {
+          prop1: 'prop1',
+          prop2: 'prop2'
+        }
+      });
+
+      doc.update({
+        'nested.prop2': Firestore.FieldValue.delete()
+      });
+
+      doc.get().then(function (snap) {
+        expect(snap.get('nested')).to.deep.equal({
+          prop1: 'prop1',          
+        });
+        done();
+      }).catch(done);
+
+      db.flush();
+    });
+
+
+
     it('can update date fields', function (done) {
       var date = new Date(2018, 2, 2);
       var nextDate = new Date(2018, 3, 3);

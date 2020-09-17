@@ -584,6 +584,7 @@ describe('MockFirebase', function () {
       expect(ref.getData().some).to.eql({other: {prop: 2}});
     });
 
+
     it('handles multiple calls in the same flush', function () {
       ref.update({
         a: 1
